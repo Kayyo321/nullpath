@@ -34,13 +34,28 @@ def script_exit(statuscode):
 
     sys.exit(statuscode)
 
+# On Windows, os.system() runs cmd.exe, which can't run the sed/cp/rm/find
+# commands below. Run them through the MSYS bash (MozillaBuild or Git Bash)
+# instead; the wrapper script passes its path in NULLPATH_BASH.
+if os.name == "nt":
+    import subprocess
+    _bash = os.environ.get("NULLPATH_BASH") or shutil.which("bash")
+    if not _bash or "system32" in _bash.lower():
+        sys.stderr.write("error: run this from MozillaBuild or Git Bash (no MSYS bash found)\n")
+        sys.exit(1)
+
+    def run_shell(cmd):
+        return subprocess.call([_bash, "-c", cmd])
+else:
+    run_shell = os.system
+
 def exec(cmd, exit_on_fail = True, do_print = True):
     if cmd != '':
         if do_print:
             print(cmd)
             sys.stdout.flush()
         if not options.no_execute:
-            retval = os.system(cmd)
+            retval = run_shell(cmd)
             if retval != 0 and exit_on_fail:
                 print("fatal error: command '{}' failed".format(cmd))
                 sys.stdout.flush()
@@ -55,7 +70,7 @@ def patch(patchfile):
     print("\n*** -> {}".format(cmd))
     sys.stdout.flush()
     if not options.no_execute:
-        retval = os.system(cmd)
+        retval = run_shell(cmd)
         if retval != 0:
             print("fatal error: patch '{}' failed".format(patchfile))
             sys.stdout.flush()
@@ -101,13 +116,13 @@ def librewolf_patches():
     exec('rm -vrf toolkit/components/ml/vendor/openai')
 
     # Add our display versioning for MOZ_PKG_VERSION
-    with open("../assets/mozconfig.new", "r") as f:
+    with open("../assets/mozconfig.new", "r", encoding="utf-8") as f:
         text = f.read().replace(
             "export MOZ_PKG_VERSION=",
             f"export MOZ_PKG_VERSION={version}-{release}"
         )
 
-    with open("../assets/mozconfig.new", "w") as f:
+    with open("../assets/mozconfig.new", "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
 
     # create the right mozconfig file..
@@ -167,15 +182,16 @@ def librewolf_patches():
     exec('cp -v ../assets/mozconfig.new lw/')
 
     # override the firefox version
-    with open("browser/config/version.txt", "w") as f:
+    with open("browser/config/version.txt", "w", encoding="utf-8", newline="\n") as f:
         f.write(version)
 
-    with open("browser/config/version_display.txt", "w") as f:
+    with open("browser/config/version_display.txt", "w", encoding="utf-8", newline="\n") as f:
         f.write("{}-{}".format(version, release))
 
     if os.environ.get("SKIP_FETCHING_LOCALES") is None:
         print("-> Downloading locales from https://librewolf.dev/mirror/firefox-l10n")
         with TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir).as_posix()  # backslashes would be eaten by bash on Windows
             exec(f"git clone --depth=1 https://librewolf.dev/mirror/firefox-l10n {tmpdir}/l10n")
             exec(f"rm -rf {tmpdir}/l10n/.git {tmpdir}/l10n/.github {tmpdir}/l10n/LICENSE {tmpdir}/l10n/README")
             exec(f"mv {tmpdir}/l10n lw/l10n")
@@ -216,8 +232,8 @@ def librewolf_patches():
 
         if not target_path.exists() and write_mode == "a":
             print(f"warning: target file {target_path} doesn't exist")
-        with open(target_path, write_mode) as target_file:
-            with open(source_path, "r") as source_file:
+        with open(target_path, write_mode, encoding="utf-8", newline="\n") as target_file:
+            with open(source_path, "r", encoding="utf-8") as source_file:
                 target_file.write(("\n\n" if write_mode == "a" else "") + source_file.read())
 
     leave_srcdir()
