@@ -1,0 +1,39 @@
+# Nullpath: windows-uninstall-reset-key.patch
+#
+# Firefox's uninstaller writes HKCU\Software\Mozilla\Firefox "Uninstalled-<channel>",
+# and BrowserGlue reads *and deletes* that same hard-coded Firefox value on startup.
+# In any Firefox fork this means the fork consumes (deletes) a real Firefox
+# install's value and never sees its own. Key both sides off the app's own name
+# instead (Services.appinfo.name == BrandFullNameInternal == MOZ_APP_BASENAME).
+# License: MPL 2.0
+
+diff --git a/browser/components/BrowserGlue.sys.mjs b/browser/components/BrowserGlue.sys.mjs
+--- a/browser/components/BrowserGlue.sys.mjs
++++ b/browser/components/BrowserGlue.sys.mjs
+@@ -864,12 +864,12 @@
+       if (updateChannel) {
+         let uninstalledValue = lazy.WindowsRegistry.readRegKey(
+           Ci.nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,
+-          "Software\\Mozilla\\Firefox",
++          "Software\\Mozilla\\" + Services.appinfo.name,
+           `Uninstalled-${updateChannel}`
+         );
+         let removalSuccessful = lazy.WindowsRegistry.removeRegKey(
+           Ci.nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,
+-          "Software\\Mozilla\\Firefox",
++          "Software\\Mozilla\\" + Services.appinfo.name,
+           `Uninstalled-${updateChannel}`
+         );
+         if (removalSuccessful && uninstalledValue == "True") {
+diff --git a/browser/installer/windows/nsis/uninstaller.nsi b/browser/installer/windows/nsis/uninstaller.nsi
+--- a/browser/installer/windows/nsis/uninstaller.nsi
++++ b/browser/installer/windows/nsis/uninstaller.nsi
+@@ -735,7 +735,7 @@
+   ; subsequently deleted after checking. If the value is found during startup
+   ; the browser will offer to Reset Firefox. We use the UpdateChannel to match
+   ; uninstalls of Firefox-release with reinstalls of Firefox-release, for example.
+-  WriteRegStr HKCU "Software\Mozilla\Firefox" "Uninstalled-${UpdateChannel}" "True"
++  WriteRegStr HKCU "Software\Mozilla\${BrandFullNameInternal}" "Uninstalled-${UpdateChannel}" "True"
+ 
+ !ifdef MOZ_MAINTENANCE_SERVICE
+   ; Get the path the allowed cert is at and remove it

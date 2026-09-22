@@ -1,0 +1,5 @@
+# Nullpath patch series, applied in order after LibreWolf's patches
+# (scripts/windows-build.sh prepare). Paths are relative to nullpath/.
+# Skip the whole layer with NULLPATH_BASELINE=1.
+
+patches/windows-uninstall-reset-key.patch

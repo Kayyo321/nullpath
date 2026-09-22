@@ -1,0 +1,6 @@
+# Only the *public* MAR certificates (release_primary.der, release_secondary.der)
+# belong here. Never commit private keys, NSS databases or PKCS#12 bundles.
+*
+!.gitignore
+!release_primary.der
+!release_secondary.der
