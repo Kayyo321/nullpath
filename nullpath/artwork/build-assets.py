@@ -7,7 +7,7 @@ The generated files live in nullpath/branding and are copied by the overlay.
 
 from base64 import b64encode
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image
 import io
 import sys
 
@@ -93,25 +93,28 @@ for relative in ["content/about-wordmark.svg", "content/firefox-wordmark.svg"]:
     target.write_text(embedded_svg(letters, 350, 96, contextual=True), encoding="utf-8")
 
 
-def taskbar_icon(size):
-    """White Nullpath mark on an opaque dark disc, with alpha outside it."""
-    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(canvas)
-    diameter = round(size * 0.96)
-    origin = (size - diameter) // 2
-    draw.ellipse((origin, origin, origin + diameter - 1, origin + diameter - 1),
-                 fill=(32, 35, 50, 255))
-    mark = ICON_DARK.crop(ICON_DARK.getbbox())
-    extent = max(1, round(size * 0.88))
-    mark.thumbnail((extent, extent), RESAMPLE)
-    canvas.alpha_composite(mark, ((size - mark.width) // 2, (size - mark.height) // 2))
-    return canvas
+def filled_icon(source):
+    """White mark with every enclosed hole inside the ring filled black."""
+    import numpy as np
+    from scipy import ndimage
+    labels, _ = ndimage.label(np.array(source.getchannel("A")) < 128)
+    edge = np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))
+    holes = (labels > 0) & ~np.isin(labels, edge)
+    # Grow under the antialiased edges so no transparent seam remains.
+    holes = ndimage.binary_dilation(holes, iterations=3)
+    filled = Image.new("RGBA", source.size, (0, 0, 0, 0))
+    filled.paste((0, 0, 0, 255), mask=Image.fromarray((holes * 255).astype("uint8")))
+    filled.alpha_composite(source)
+    return filled
 
 
-# The desktop and pinned-taskbar icon use the supplied white artwork unchanged.
-ico = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
-ico.alpha_composite(taskbar_icon(256))
-for relative in ["firefox.ico", "firefox64.ico"]:
+# Windows shell icons (exe, taskbar, file associations, jump list) read on
+# any background.
+ICON_FILLED = filled_icon(ICON_DARK)
+ICON_FILLED.save(HERE / "LogoIconFilled.png", optimize=True)
+ico = contain(ICON_FILLED, (256, 256), margin=0.02)
+for relative in ["firefox.ico", "firefox64.ico", "document.ico", "document_pdf.ico",
+                 "newtab.ico", "newwindow.ico", "pbmode.ico"]:
     save_asset(relative, ico, "ICO")
 
 for relative in [
