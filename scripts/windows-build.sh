@@ -238,6 +238,21 @@ do_fast() {
   python scripts/nullpath-overlay.py "$lw_dir"
   log "Rebuilding front-end files only"
   (cd "$lw_dir" && ./mach build faster)
+  purge_startup_caches
+}
+
+# A faster build doesn't bump the build id, so profiles keep serving the old
+# JS from their startup cache unless it's purged. Gecko only checks for
+# .purgecaches (and the first profile to start deletes it), so also clear the
+# caches directly: Nullpath runs its three modes as separate profiles.
+purge_startup_caches() {
+  touch "$OBJDIR/dist/bin/.purgecaches" "$OBJDIR/dist/bin/browser/.purgecaches"
+  local local_app
+  local_app="$(cygpath -u "${LOCALAPPDATA:-$USERPROFILE/AppData/Local}")"
+  rm -rf "$local_app"/nullpath/Profiles/*/startupCache
+  if tasklist 2>/dev/null | grep -qi '^nullpath\.exe'; then
+    printf 'note: nullpath.exe is running; quit and relaunch it to see the changes\n'
+  fi
 }
 
 do_package() {
