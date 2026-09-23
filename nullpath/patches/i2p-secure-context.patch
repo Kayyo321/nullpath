@@ -53,6 +53,30 @@ diff --git a/dom/security/nsMixedContentBlocker.cpp b/dom/security/nsMixedConten
    if (nsMixedContentBlocker::IsPotentiallyTrustworthyOnion(aURI)) {
      return true;
    }
+diff --git a/dom/security/nsHTTPSOnlyUtils.cpp b/dom/security/nsHTTPSOnlyUtils.cpp
+--- a/dom/security/nsHTTPSOnlyUtils.cpp
++++ b/dom/security/nsHTTPSOnlyUtils.cpp
+@@ -868,12 +868,18 @@
+ 
+ /* static */
+ bool nsHTTPSOnlyUtils::OnionException(nsIURI* aURI) {
++  nsAutoCString host;
++  aURI->GetHost(host);
++  // Nullpath: .i2p sites are encrypted end to end by I2P and rarely offer
++  // HTTPS, so don't upgrade them while they count as secure contexts.
++  if (mozilla::StaticPrefs::dom_securecontext_allowlist_i2p() &&
++      StringEndsWith(host, ".i2p"_ns)) {
++    return true;
++  }
+   // Onion-host exception can get disabled with a pref
+   if (mozilla::StaticPrefs::dom_security_https_only_mode_upgrade_onion()) {
+     return false;
+   }
+-  nsAutoCString host;
+-  aURI->GetHost(host);
+   return StringEndsWith(host, ".onion"_ns);
+ }
+ 
 diff --git a/browser/base/content/browser-siteIdentity.js b/browser/base/content/browser-siteIdentity.js
 --- a/browser/base/content/browser-siteIdentity.js
 +++ b/browser/base/content/browser-siteIdentity.js
