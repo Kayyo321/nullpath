@@ -6,6 +6,10 @@
 #   prepare   - extract it and apply the LibreWolf patches (librewolf-<version>-<release>/)
 #   bootstrap - let mach install the Windows toolchains (clang-cl, Windows SDK, Rust, ...)
 #   build     - ./mach build
+#   fast      - re-copy nullpath/tree-overrides and the settings into the tree,
+#               then ./mach build faster (JS/CSS/FTL/SVG/prefs only; seconds).
+#               Use 'build' after changing moz.build, components.conf, C++/Rust,
+#               patches or build flags.
 #   package   - ./mach package  (produces a .zip under $OBJDIR/dist/, default D:/nullpath/obj)
 #   sign      - Authenticode-sign every .exe/.dll in the package with signtool
 #               (see docs/nullpath/REBRAND-HANDOFF.md, "Code signing")
@@ -170,6 +174,8 @@ apply_nullpath_layer() {
       die "Nullpath patch failed to apply: $line"
   done <nullpath/patches.txt
 
+  python scripts/nullpath-overlay.py "$lw_dir"
+
   # Nullpath's own MAR update-signing *public* keys, if generated (never commit
   # the private keys). These replace the LibreWolf keys librewolf-patches.py copied in.
   local updater_dir="$lw_dir/toolkit/mozapps/update/updater" k
@@ -212,6 +218,26 @@ do_build() {
   check_update_keys
   log "Building (expect 1-3 hours on first build)"
   (cd "$lw_dir" && ./mach build)
+  sccache_stats
+}
+
+# The overlay adds --with-ccache=sccache to the mozconfig. sccache's default
+# 10 GB cache is too small to hold a whole Firefox build.
+export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-30G}"
+
+sccache_stats() {
+  local sccache="$HOME/.mozbuild/sccache/sccache.exe"
+  [ -x "$sccache" ] && "$sccache" --show-stats | grep -E '^(Compile requests|Cache hits|Cache misses|Cache size|Max cache size)' || true
+}
+
+do_fast() {
+  require_mozillabuild fast
+  [ -d "$OBJDIR/backend.FasterMakeBackend" ] || [ -f "$OBJDIR/backend.FasterMakeBackend" ] ||
+    die "no build in $OBJDIR yet; run 'build' first"
+  log "Copying Nullpath files into $lw_dir"
+  python scripts/nullpath-overlay.py "$lw_dir"
+  log "Rebuilding front-end files only"
+  (cd "$lw_dir" && ./mach build faster)
 }
 
 do_package() {
@@ -285,8 +311,8 @@ do_run() {
 [ "$#" -gt 0 ] || set -- all
 for step in "$@"; do
   case "$step" in
-    fetch|prepare|bootstrap|build|package|sign|run) "do_$step" ;;
+    fetch|prepare|bootstrap|build|fast|package|sign|run) "do_$step" ;;
     all) do_fetch; do_prepare; do_bootstrap; do_build; do_package ;;
-    *) die "unknown step '$step' (fetch prepare bootstrap build package sign run all)" ;;
+    *) die "unknown step '$step' (fetch prepare bootstrap build fast package sign run all)" ;;
   esac
 done
