@@ -26,7 +26,7 @@ add_task(function test_conf_defaults() {
 add_task(function test_tunnels() {
   Assert.ok(!buildTunnelsConf({ ports, outproxy: null }).includes("[nullpath-publicweb]"));
   let t = buildTunnelsConf({ ports, outproxy: "exit.example.i2p" });
-  Assert.ok(t.includes("outproxy = exit.example.i2p"));
+  Assert.ok(t.includes("outproxy = http://exit.example.i2p\n"), "i2pd gets a URL");
   Assert.ok(t.includes("port = 14450"));
 });
 

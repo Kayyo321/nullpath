@@ -129,6 +129,14 @@ verify = true
 }
 
 /**
+ * i2pd's outproxy option is a URL ("http://exit.example.i2p"); Nullpath
+ * stores the bare destination ("exit.example.i2p" or "host:port").
+ */
+export function outproxyURL(destination) {
+  return `http://${destination}`;
+}
+
+/**
  * The public-web tunnel. It's left out entirely until the user sets an
  * outproxy, which is how "present but disabled" is expressed for i2pd.
  */
@@ -143,7 +151,7 @@ export function buildTunnelsConf({ ports, outproxy }) {
 type = httpproxy
 address = ${LOOPBACK}
 port = ${ports.publicWeb}
-outproxy = ${outproxy}
+outproxy = ${outproxyURL(outproxy)}
 keys = nullpath-publicweb.dat
 `;
 }
@@ -685,7 +693,7 @@ class ManagedRouter {
     let path = PathUtils.join(this.dir, "tunnels.conf");
     let text = await IOUtils.readUTF8(path).catch(() => "");
     if (/^\s*\[nullpath-publicweb\]/m.test(text) && destination) {
-      text = setConfKey(text, "nullpath-publicweb", "outproxy", destination);
+      text = setConfKey(text, "nullpath-publicweb", "outproxy", outproxyURL(destination));
     } else {
       // Keep any tunnels the user added by hand; replace only ours.
       let own = /\n?\[nullpath-publicweb\][\s\S]*?(?=\n\[|$)/;

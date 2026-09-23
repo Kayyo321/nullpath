@@ -143,6 +143,37 @@ export function parseEndpoint(value, { allowLan = false } = {}) {
   return { host: host.replace(/^\[|\]$/g, ""), port };
 }
 
+/**
+ * Parses an outproxy destination: an .i2p name or .b32.i2p address, with an
+ * optional port. Accepts what people paste from outproxy lists, such as
+ * "http://exit.example.i2p/". Returns "host" or "host:port", "" for empty
+ * input, or throws an Error whose message is a Fluent id from router.ftl.
+ */
+export function parseOutproxyDestination(value) {
+  value = String(value ?? "").trim();
+  if (!value) {
+    return "";
+  }
+  let url;
+  try {
+    url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `http://${value}`);
+  } catch (e) {
+    throw new Error("nullpath-outproxy-error-destination");
+  }
+  if (
+    url.protocol != "http:" ||
+    url.username ||
+    url.password ||
+    url.pathname != "/" ||
+    url.search ||
+    url.hash ||
+    !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.i2p$/.test(url.hostname)
+  ) {
+    throw new Error("nullpath-outproxy-error-destination");
+  }
+  return url.port ? `${url.hostname}:${url.port}` : url.hostname;
+}
+
 export function formatEndpoint({ host, port }) {
   return host.includes(":") ? `[${host}]:${port}` : `${host}:${port}`;
 }

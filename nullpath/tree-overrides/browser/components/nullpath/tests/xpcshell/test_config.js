@@ -6,6 +6,7 @@
 const {
   parseEndpoint,
   parseLocalURL,
+  parseOutproxyDestination,
   isLoopbackHost,
   isPrivateHost,
   formatEndpoint,
@@ -43,6 +44,37 @@ add_task(function test_urls() {
   Assert.throws(() => parseLocalURL("https://127.0.0.1:7657/"), /url-format/);
   Assert.throws(() => parseLocalURL("http://user:pw@127.0.0.1:7657/"), /url-format/);
   Assert.throws(() => parseLocalURL("http://localhost:7657/"), /url-format/);
+});
+
+add_task(function test_outproxy_destinations() {
+  // What people paste from outproxy lists is accepted and stored bare.
+  for (let [input, expected] of [
+    ["exit.stormycloud.i2p", "exit.stormycloud.i2p"],
+    ["  http://exit.stormycloud.i2p  ", "exit.stormycloud.i2p"],
+    ["http://exit.stormycloud.i2p/", "exit.stormycloud.i2p"],
+    ["HTTP://Exit.StormyCloud.I2P", "exit.stormycloud.i2p"],
+    ["exit.example.i2p:4444", "exit.example.i2p:4444"],
+    ["http://exit.example.i2p:80/", "exit.example.i2p"],
+    ["abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrst.b32.i2p", "abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrst.b32.i2p"],
+    ["", ""],
+  ]) {
+    Assert.equal(parseOutproxyDestination(input), expected, input);
+  }
+  for (let bad of [
+    "exit.example.com",
+    "https://exit.stormycloud.i2p",
+    "socks://exit.example.i2p",
+    "http://user:pw@exit.example.i2p",
+    "http://exit.example.i2p/path",
+    "http://exit.example.i2p/?q=1",
+    "i2p",
+    ".i2p",
+    "exit..example.i2p",
+    "-exit.example.i2p",
+    "exit example.i2p",
+  ]) {
+    Assert.throws(() => parseOutproxyDestination(bad), /nullpath-outproxy-error-destination/, bad);
+  }
 });
 
 add_task(async function test_roundtrip_and_atomic_write() {

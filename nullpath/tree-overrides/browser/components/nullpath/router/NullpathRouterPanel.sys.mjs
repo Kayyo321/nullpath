@@ -38,6 +38,8 @@ const lazy = XPCOMUtils.declareLazy({
     "moz-src:///browser/components/nullpath/router/NullpathRouterConfig.sys.mjs",
   parseLocalURL:
     "moz-src:///browser/components/nullpath/router/NullpathRouterConfig.sys.mjs",
+  parseOutproxyDestination:
+    "moz-src:///browser/components/nullpath/router/NullpathRouterConfig.sys.mjs",
   testProxy:
     "moz-src:///browser/components/nullpath/router/NullpathRouterDetect.sys.mjs",
   ClipboardHelper: {
@@ -1369,9 +1371,11 @@ export class NullpathRouterPanel {
       return;
     }
     if (c.setup == "managed") {
-      let dest = f.destination.trim().toLowerCase();
-      if (dest && !/^[a-z0-9][a-z0-9.-]*\.i2p$/.test(dest)) {
-        err("destination", "nullpath-outproxy-error-destination");
+      let dest;
+      try {
+        dest = lazy.parseOutproxyDestination(f.destination);
+      } catch (e) {
+        err("destination", e.message);
         return;
       }
       await lazy.NullpathRouterConfig.update(cfg => {
