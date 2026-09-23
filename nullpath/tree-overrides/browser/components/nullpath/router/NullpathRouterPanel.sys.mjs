@@ -1289,7 +1289,8 @@ export class NullpathRouterPanel {
     let op = this.#router.outproxy;
     let resultId = {
       ok: "nullpath-outproxy-reachable",
-      unreachable: "nullpath-outproxy-unreachable",
+      // No status means the router gave up or closed without answering.
+      unreachable: op.httpStatus ? "nullpath-outproxy-unreachable" : "nullpath-outproxy-no-response",
       checking: "nullpath-router-test-running",
     }[op.status];
     if (!c.setup) {
@@ -1349,7 +1350,7 @@ export class NullpathRouterPanel {
         ? h(d, "p", { class: "nullpath-router-help-text", l10n: { id: "nullpath-outproxy-test-url", args: { url: this.#router.outproxyTestURL } } })
         : null,
       resultId
-        ? h(d, "p", { class: "nullpath-router-test-result", role: "status", l10n: { id: resultId, args: { status: op.httpStatus || "—" } } })
+        ? h(d, "p", { class: "nullpath-router-test-result", role: "status", l10n: { id: resultId, args: { status: op.httpStatus } } })
         : null,
     ];
   }

@@ -281,8 +281,9 @@ nullpath-outproxy-test-send = Send test
 nullpath-outproxy-test-url = The test asks the outproxy to connect to { $url }.
 nullpath-outproxy-reachable = Reachable
 # Variables:
-#   $status (String) - the proxy's HTTP status, or "—"
+#   $status (Number) - the proxy's HTTP status
 nullpath-outproxy-unreachable = Unreachable (proxy answered { $status })
+nullpath-outproxy-no-response = Unreachable (no response from the outproxy; it may be offline, or your router may not have finished connecting)
 
 ## Advanced
 
