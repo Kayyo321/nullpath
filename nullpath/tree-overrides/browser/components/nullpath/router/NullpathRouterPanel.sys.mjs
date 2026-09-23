@@ -202,6 +202,7 @@ export class NullpathRouterPanel {
   #outproxyTestShown = false;
   #removeConfirm = false;
   #showPassword = false;
+  #detailsExpanded = false;
   #observer = () => this.update();
   #setupListener = () => this.update();
 
@@ -375,7 +376,17 @@ export class NullpathRouterPanel {
     let on = router.desired == "on";
 
     let header = h(d, "div", { class: "nullpath-router-header" },
-      h(d, "h1", { class: "nullpath-router-title", l10n: { id: "nullpath-router-title" } }),
+      h(d, "div", { class: "nullpath-router-brand" },
+        h(d, "span", { class: "nullpath-router-mark", "aria-hidden": "true" }),
+        h(d, "div", {},
+          h(d, "h1", { class: "nullpath-router-title", l10n: { id: "nullpath-router-title" } }),
+          h(d, "div", { class: `nullpath-router-status nullpath-state-${state}`, "aria-live": "polite" },
+            h(d, "span", { class: "nullpath-state-shape", "aria-hidden": "true" }),
+            h(d, "span", { l10n: this.#statusL10n() })
+          ),
+          h(d, "p", { class: "nullpath-router-identity", l10n: this.#identityL10n() })
+        )
+      ),
       h(d, "moz-toggle", {
         id: "nullpath-router-switch",
         pressed: on,
@@ -385,15 +396,15 @@ export class NullpathRouterPanel {
       })
     );
 
-    let status = h(d, "p", {
-      id: "nullpath-router-status",
-      class: `nullpath-router-status nullpath-state-${state}`,
-      "aria-live": "polite",
-      l10n: this.#statusL10n(),
-    });
-
     let extra = [];
-    if (state == "connecting") {
+    if (state == "off") {
+      extra.push(h(d, "button", {
+        id: "nullpath-router-connect",
+        class: "footer-button primary nullpath-router-action",
+        l10n: { id: config.setup ? "nullpath-router-connect" : "nullpath-router-setup" },
+        onclick: () => config.setup ? this.#onSwitch(true) : this.#renderChooserAction(),
+      }));
+    } else if (state == "connecting") {
       extra.push(this.#renderStages());
       extra.push(h(d, "button", {
         id: "nullpath-router-cancel",
@@ -404,6 +415,7 @@ export class NullpathRouterPanel {
     } else if (state == "attention") {
       extra.push(...this.#renderAttention());
     } else if (state == "connected") {
+      extra.push(h(d, "p", { class: "nullpath-router-ready", l10n: { id: "nullpath-router-ready" } }));
       extra.push(h(d, "p", { class: "nullpath-router-note", l10n: { id: "nullpath-router-first-site-note" } }));
     }
 
@@ -427,75 +439,73 @@ export class NullpathRouterPanel {
         peers: router.details.peers ?? 0,
       };
     }
-    let info = h(d, "div", { class: "nullpath-router-section nullpath-router-info" },
-      h(d, "div", { class: "nullpath-router-kv" },
-        h(d, "span", { l10n: { id: "nullpath-router-proxy-label" } }),
-        h(d, "span", {}, sites ? lazy.formatEndpoint(sites) : "—")
+    let details = h(d, "section", { class: "nullpath-router-section nullpath-router-info" },
+      h(d, "button", {
+        id: "nullpath-router-details-toggle",
+        class: "nullpath-details-toggle",
+        "aria-expanded": this.#detailsExpanded,
+        onclick: () => { this.#detailsExpanded = !this.#detailsExpanded; this.update(); },
+      },
+        h(d, "span", { l10n: { id: "nullpath-router-details-label" } }),
+        h(d, "span", { class: "nullpath-chevron", "aria-hidden": "true" })
       ),
-      h(d, "div", { class: "nullpath-router-kv" },
-        h(d, "span", { l10n: { id: "nullpath-router-router-label" } }),
-        h(d, "span", { l10n: { id: detailsId, args: detailsArgs } })
-      ),
-      this.#renderRelay()
+      this.#detailsExpanded ? h(d, "div", { class: "nullpath-details-content" },
+        h(d, "div", { class: "nullpath-router-kv" },
+          h(d, "span", { l10n: { id: "nullpath-router-proxy-label" } }),
+          h(d, "span", {}, sites ? lazy.formatEndpoint(sites) : "—")
+        ),
+        h(d, "div", { class: "nullpath-router-kv" },
+          h(d, "span", { l10n: { id: "nullpath-router-router-label" } }),
+          h(d, "span", { l10n: { id: detailsId, args: detailsArgs } })
+        ),
+        this.#renderRelay()
+      ) : null
     );
 
     let consoleURL = config.advanced?.showConsoleLink !== false ? router.consoleURL() : null;
     let footer = h(d, "div", { class: "nullpath-router-footer" },
-      h(d, "div", { class: "nullpath-router-buttons" },
-        lazy.NullpathProfileMode.mode != lazy.Modes.SITES
-          ? h(d, "button", {
-              id: "nullpath-router-open-i2p",
-              class: "footer-button",
-              l10n: { id: "nullpath-router-open-i2p-window" },
-              onclick: () => {
-                lazy.NullpathProfileMode.openInMode(lazy.Modes.SITES);
-                this.#close();
-              },
-            })
-          : null,
-        consoleURL
-          ? h(d, "button", {
-              id: "nullpath-router-console",
-              class: "footer-button",
-              l10n: { id: "nullpath-router-console" },
-              onclick: () => this.#openTab(consoleURL),
-            })
-          : null
-      ),
       h(d, "div", { class: "nullpath-router-nav" },
         h(d, "button", {
           id: "nullpath-router-settings-button",
-          class: "subviewbutton subviewbutton-nav",
+          class: "nullpath-footer-button",
           l10n: { id: "nullpath-router-settings" },
           onclick: e => this.#showSubView(VIEWS.SETTINGS, e.target),
         }),
         h(d, "button", {
           id: "nullpath-router-help-button",
-          class: "subviewbutton subviewbutton-nav",
+          class: "nullpath-footer-button",
           l10n: { id: "nullpath-router-help" },
           onclick: e => this.#showSubView(VIEWS.WHATIS, e.target),
         })
-      )
+      ),
+      consoleURL ? h(d, "button", {
+        id: "nullpath-router-console", class: "nullpath-footer-row nullpath-router-external-link",
+        l10n: { id: "nullpath-router-console" }, onclick: () => this.#openTab(consoleURL),
+      }) : null,
+      lazy.NullpathProfileMode.mode != lazy.Modes.SITES ? h(d, "button", {
+        id: "nullpath-router-open-i2p", class: "nullpath-footer-row",
+        l10n: { id: "nullpath-router-open-i2p-window" },
+        onclick: () => { lazy.NullpathProfileMode.openInMode(lazy.Modes.SITES); this.#close(); },
+      }) : null
     );
-    return [header, status, ...extra, h(d, "hr"), modes, h(d, "hr"), info, h(d, "hr"), footer];
+    return [header, ...extra, modes, details, footer];
+  }
+
+  #renderChooserAction() {
+    this.#chooserOverride = true;
+    this.#detection = null;
+    this.#render(VIEWS.MAIN);
   }
 
   #statusL10n() {
-    let router = this.#router;
+    return { id: `nullpath-router-state-${this.#router.state}` };
+  }
+
+  #identityL10n() {
     let setup = this.#config.setup;
-    let routerName = "none";
-    let endpoint = "";
-    if (setup == "managed") {
-      routerName = "managed";
-    } else if (setup == "external") {
-      let kind = this.#config.external?.kind;
-      routerName = kind == "java-i2p" ? "java" : kind == "i2pd" ? "i2pd" : "other";
-      endpoint = this.#config.external?.sitesProxy ?? "";
-    }
-    return {
-      id: "nullpath-router-status",
-      args: { state: router.state, router: routerName, endpoint },
-    };
+    if (!setup) return { id: "nullpath-router-identity-none" };
+    if (setup == "managed") return { id: "nullpath-router-identity-managed" };
+    return { id: "nullpath-router-identity-own", args: { endpoint: this.#config.external?.sitesProxy ?? "" } };
   }
 
   #renderStages() {
@@ -505,7 +515,6 @@ export class NullpathRouterPanel {
     let current = order.indexOf(this.#router.stage);
     return h(d, "ol", { class: "nullpath-router-stages" },
       order
-        .filter(s => managed || s != "starting")
         .map(s => {
           let i = order.indexOf(s);
           let status = i < current ? "done" : i == current ? "running" : "pending";
@@ -561,7 +570,7 @@ export class NullpathRouterPanel {
         : null,
       h(d, "div", { class: "nullpath-router-attention" },
         actions.map(([id, fn], i) =>
-          h(d, "button", { id: `nullpath-router-attention-${i}`, class: "footer-button", disabled: busy, l10n: { id }, onclick: fn })
+          h(d, "button", { id: `nullpath-router-attention-${i}`, class: i == 0 ? "footer-button primary" : "footer-button", disabled: busy, l10n: { id }, onclick: fn })
         )
       ),
     ];
@@ -586,16 +595,24 @@ export class NullpathRouterPanel {
         statusId = "nullpath-mode-status-checking";
       }
     }
+    let iconName = mode == lazy.Modes.SITES ? "sites" : mode == lazy.Modes.PUBLIC_WEB ? "publicweb" : "direct";
     return h(d, "button", {
       id: `nullpath-mode-row-${mode}`,
-      class: "subviewbutton nullpath-mode-row" + (current ? "" : " subviewbutton-nav"),
+      class: "nullpath-mode-row",
       disabled: current,
+      "aria-current": current ? "page" : null,
       onclick: e => this.#onModeRow(mode, e.target),
     },
-      h(d, "span", { class: "nullpath-mode-name", l10n: { id: `nullpath-mode-${mode}` } }),
+      h(d, "span", { class: "nullpath-mode-icon", "aria-hidden": "true" },
+        h(d, "img", { src: `chrome://browser/skin/nullpath/mode-${iconName}.svg`, alt: "" })
+      ),
+      h(d, "span", { class: "nullpath-mode-copy" },
+        h(d, "span", { class: "nullpath-mode-name", l10n: { id: `nullpath-mode-${mode}` } }),
+        h(d, "span", { class: "nullpath-mode-status", l10n: { id: statusId } })
+      ),
       current
         ? h(d, "span", { class: "nullpath-mode-tag", l10n: { id: "nullpath-mode-this-window" } })
-        : h(d, "span", { class: "nullpath-mode-status", l10n: { id: statusId } })
+        : h(d, "span", { class: "nullpath-chevron", "aria-hidden": "true" })
     );
   }
 
@@ -631,7 +648,7 @@ export class NullpathRouterPanel {
             h(d, "span", { l10n: { id: "nullpath-router-relay-external" } }),
             this.#router.consoleURL()
               ? h(d, "button", {
-                  class: "text-link nullpath-router-link",
+                  class: "text-link nullpath-router-link nullpath-router-external-link",
                   l10n: { id: "nullpath-router-console" },
                   onclick: () => this.#openTab(this.#router.consoleURL()),
                 })
@@ -666,6 +683,32 @@ export class NullpathRouterPanel {
 
   // --- chooser (§4.3) -----------------------------------------------------
 
+  #renderSetupHeader() {
+    let d = this.#doc;
+    let state = this.#router.state;
+    let on = this.#router.desired == "on";
+    return h(d, "div", { class: "nullpath-router-header" },
+      h(d, "div", { class: "nullpath-router-brand" },
+        h(d, "span", { class: "nullpath-router-mark", "aria-hidden": "true" }),
+        h(d, "div", {},
+          h(d, "h1", { class: "nullpath-router-title", l10n: { id: "nullpath-router-title" } }),
+          h(d, "div", { class: `nullpath-router-status nullpath-state-${state}`, "aria-live": "polite" },
+            h(d, "span", { class: "nullpath-state-shape", "aria-hidden": "true" }),
+            h(d, "span", { l10n: this.#statusL10n() })
+          ),
+          h(d, "p", { class: "nullpath-router-identity", l10n: this.#identityL10n() })
+        )
+      ),
+      h(d, "moz-toggle", {
+        id: "nullpath-router-switch",
+        pressed: on,
+        l10n: { id: on ? "nullpath-router-switch-on" : "nullpath-router-switch-off" },
+        "data-l10n-attrs": "label, aria-label",
+        ontoggle: e => this.#onSwitch(e.target.pressed),
+      })
+    );
+  }
+
   #renderChooser() {
     let d = this.#doc;
     let found = this.#detection?.proxy;
@@ -679,6 +722,7 @@ export class NullpathRouterPanel {
         bodyEl
       );
     return [
+      this.#renderSetupHeader(),
       h(d, "h1", { class: "nullpath-router-title", l10n: { id: "nullpath-chooser-title" } }),
       h(d, "p", { l10n: { id: "nullpath-chooser-intro" } }),
       card(
@@ -765,6 +809,7 @@ export class NullpathRouterPanel {
       ["nullpath-setup-remove", {}],
     ];
     return [
+      this.#renderSetupHeader(),
       h(d, "h1", { class: "nullpath-router-title", l10n: { id: "nullpath-setup-title" } }),
       h(d, "ul", { class: "nullpath-setup-explain" },
         items.map(([id, args]) => h(d, "li", { l10n: { id, args } }))
@@ -797,6 +842,7 @@ export class NullpathRouterPanel {
     let d = this.#doc;
     let cancellable = SetupTask.running && SetupTask.steps.start?.status == "pending";
     return [
+      this.#renderSetupHeader(),
       h(d, "h1", { class: "nullpath-router-title", l10n: { id: "nullpath-setup-title" } }),
       h(d, "ol", { class: "nullpath-router-stages", "aria-live": "polite" },
         SETUP_STEPS.map(step => {
@@ -1305,7 +1351,7 @@ export class NullpathRouterPanel {
       managed
         ? h(d, "button", {
             id: "nullpath-outproxy-suggestions",
-            class: "text-link nullpath-router-link",
+            class: "text-link nullpath-router-link nullpath-router-external-link",
             l10n: { id: "nullpath-outproxy-suggestions" },
             onclick: () => this.#openTab(I2P_FAQ_OUTPROXY),
           })
@@ -1482,7 +1528,7 @@ export class NullpathRouterPanel {
       h(d, "p", { l10n: { id: "nullpath-whatis-other-apps" } }),
       h(d, "button", {
         id: "nullpath-whatis-faq",
-        class: "text-link nullpath-router-link",
+        class: "text-link nullpath-router-link nullpath-router-external-link",
         l10n: { id: "nullpath-whatis-faq" },
         onclick: () => this.#openTab(I2P_FAQ),
       }),

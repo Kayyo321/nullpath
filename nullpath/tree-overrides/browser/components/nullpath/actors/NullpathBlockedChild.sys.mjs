@@ -35,12 +35,14 @@ export class NullpathBlockedChild extends JSWindowActorChild {
       return;
     }
     let win = this.contentWindow;
+    let detailData = {
+      connected: !!message.data.connected,
+      connecting: !!message.data.connecting,
+      publicWeb: String(message.data.publicWeb ?? ""),
+      dark: !!message.data.dark,
+    };
     let detail = Cu.cloneInto(
-      {
-        connected: !!message.data.connected,
-        connecting: !!message.data.connecting,
-        publicWeb: String(message.data.publicWeb ?? ""),
-      },
+      detailData,
       win
     );
     win.dispatchEvent(new win.CustomEvent("NullpathBlocked:State", { detail }));

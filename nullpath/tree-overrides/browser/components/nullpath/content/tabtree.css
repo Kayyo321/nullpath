@@ -36,6 +36,89 @@
   }
 }
 
+/* Three-profile sidebar. Width is a local UI preference, independent of the
+   browser's network mode. */
+#sidebar-container:has(#nullpath-profiles-sidebar) {
+  width: 46px;
+  min-width: 46px;
+  max-width: 46px;
+  flex: none;
+  border-inline-end: 1px solid var(--nullpath-border, #dcdcdc);
+  background: var(--nullpath-canvas, #f7f7f7);
+}
+/* sidebar-main is an HTML custom element in a XUL document. Match it without
+   a namespace-dependent type selector so the native strip cannot sit beside us. */
+#sidebar-container:has(#nullpath-profiles-sidebar) > :not(#nullpath-profiles-sidebar) { display: none !important; }
+#sidebar-container:has(#nullpath-profiles-sidebar[data-expanded="true"]) {
+  width: 272px;
+  min-width: 272px;
+  max-width: 272px;
+}
+#nullpath-profiles-sidebar { display: flex; width: 100%; min-width: 0; height: 100%; flex: 1; flex-direction: column; box-sizing: border-box; padding: 4px; gap: 8px; color: var(--nullpath-text, #181818); }
+.nullpath-sidebar-toggle,.nullpath-profile-header,.nullpath-sidebar-newtab,.nullpath-profile-newtab,.nullpath-sidebar-bottom-control,.nullpath-profile-tab-close,.nullpath-profile-twisty {
+  appearance: none; box-sizing: border-box; min-width: 36px; min-height: 36px; border: 0; border-radius: 8px;
+  background: transparent; color: inherit; font: 13px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.nullpath-sidebar-top { display: flex; min-height: 36px; align-items: center; justify-content: space-between; }
+.nullpath-sidebar-heading { display: none; font-weight: 700; }
+.nullpath-sidebar-toggle { align-self: flex-start; width: 36px; padding: 0; overflow: hidden; font-size: 0; background: center/16px no-repeat url("chrome://global/skin/icons/arrow-right-12.svg"); }
+#nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-heading { display: inline; }
+#nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-toggle { background-image: url("chrome://global/skin/icons/arrow-left-12.svg"); }
+.nullpath-profile-list { display: flex; min-height: 0; flex: 0 1 auto; flex-direction: column; align-items: stretch; gap: 8px; overflow-y: auto; }
+.nullpath-profile-block { display: flex; flex: none; flex-direction: column; min-width: 0; width: 100%; gap: 2px; }
+.nullpath-profile-header { position: relative; display: flex; width: 100%; min-height: 40px; align-items: center; gap: 8px; padding: 4px; border-inline-start: 3px solid transparent; background: var(--nullpath-raised, #f0f0f0); text-align: start; }
+.nullpath-profile-block[data-current="true"] > .nullpath-profile-header { border-inline-start-color: var(--nullpath-accent, #181818); background: var(--nullpath-accent-surface, #e8e8e8); }
+.nullpath-profile-icon { display: grid; width: 28px; height: 28px; flex: none; place-items: center; }
+.nullpath-profile-icon img { width: 20px; height: 20px; -moz-context-properties: fill, fill-opacity; fill: currentColor; }
+.nullpath-profile-header > label:not(.nullpath-profile-count) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.nullpath-profile-count { flex: none; margin-inline-start: auto; color: var(--nullpath-secondary, #5c5c5c); font-size: 11px; }
+.nullpath-profile-chevron { width: 16px; height: 16px; flex: none; background: center/12px no-repeat url("chrome://global/skin/icons/arrow-down-12.svg"); }
+.nullpath-profile-block[data-collapsed="true"] .nullpath-profile-chevron { transform: rotate(-90deg); }
+.nullpath-profile-empty { padding: 8px 8px 8px 36px; color: var(--nullpath-secondary, #5c5c5c); font-size: 12px; }
+.nullpath-profile-tab { box-sizing: border-box; min-height: 36px; align-items: center; gap: 6px; padding-inline-start: calc(6px + (var(--profile-depth, 0) * 14px)); border-radius: 8px; }
+.nullpath-profile-tab[data-depth="1"] { --profile-depth: 1; }
+.nullpath-profile-tab[data-depth="2"] { --profile-depth: 2; }
+.nullpath-profile-tab[data-depth="3"] { --profile-depth: 3; }
+.nullpath-profile-tab[data-depth="4"] { --profile-depth: 4; }
+.nullpath-profile-tab[data-depth="5"] { --profile-depth: 5; }
+.nullpath-profile-tab[data-depth="6"] { --profile-depth: 6; }
+.nullpath-profile-tab[data-selected="true"] { background: var(--nullpath-accent-surface, #e8e8e8); }
+.nullpath-profile-tab:hover { background: var(--nullpath-hover, #e8e8e8); }
+.nullpath-profile-favicon { width: 16px; height: 16px; flex: none; }
+.nullpath-profile-tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nullpath-profile-tab-close { display: none; width: 28px; min-width: 28px; min-height: 28px; background: center/16px no-repeat url("chrome://global/skin/icons/close-12.svg"); -moz-context-properties: fill; fill: currentColor; }
+.nullpath-profile-tab:hover .nullpath-profile-tab-close,.nullpath-profile-tab:focus-within .nullpath-profile-tab-close { display: block; }
+.nullpath-profile-twisty { width: 16px; min-width: 16px; min-height: 16px; height: 16px; padding: 0; background: center/12px no-repeat url("chrome://global/skin/icons/arrow-down-12.svg"); }
+.nullpath-profile-twisty[aria-expanded="false"] { background-image: url("chrome://global/skin/icons/arrow-right-12.svg"); }
+.nullpath-profile-newtab { width: 100%; padding-inline-start: 36px; text-align: start; color: var(--nullpath-accent, #181818); }
+.nullpath-sidebar-newtab { width: 36px; flex: none; padding: 0; background: center/20px no-repeat url("chrome://browser/skin/nullpath/plus.svg"); -moz-context-properties: fill; fill: currentColor; }
+.nullpath-sidebar-footer { display: flex; flex-direction: column; gap: 4px; }
+.nullpath-sidebar-bottom-control { width: 100%; padding-inline-start: 36px; overflow: hidden; white-space: nowrap; text-align: start; }
+[data-action-id="history-panelmenu"] { background: 8px center/20px no-repeat url("chrome://browser/skin/icons/history.svg"); }
+[data-action-id="preferences-button"] { background: 8px center/20px no-repeat url("chrome://global/skin/icons/settings.svg"); }
+.nullpath-sidebar-bottom-control:hover,.nullpath-profile-header:hover,.nullpath-sidebar-toggle:hover,.nullpath-profile-newtab:hover,.nullpath-sidebar-newtab:hover { background-color: var(--nullpath-hover, #e8e8e8); }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-header { width: 38px; min-height: 48px; padding: 4px 0; border-radius: 8px; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-header > label { display: none; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-chevron { display: none; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-count { display: block; position: absolute; inset-block-end: 2px; inset-inline-end: 2px; padding: 0 2px; border-radius: 4px; background: var(--nullpath-surface, #fff); }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-list { gap: 8px; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-newtab,
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-empty,
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab { display: none; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-footer .nullpath-sidebar-bottom-control { display: block; width: 36px; overflow: hidden; padding: 0; font-size: 0; background-position: center; }
+#nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-newtab { display: none; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-newtab { margin-top: 0; }
+#nullpath-profiles-sidebar :focus-visible { outline: 2px solid var(--nullpath-accent, #181818); outline-offset: 2px; }
+@media (max-width: 699px) {
+  #sidebar-container:has(#nullpath-profiles-sidebar[data-expanded="true"]) { position: absolute; inset-block: 0; inset-inline-start: 0; z-index: 10; width: 272px; max-width: min(272px, 100vw); }
+  #sidebar-container:has(#nullpath-profiles-sidebar[data-expanded="false"]) { width: 46px; min-width: 46px; max-width: 46px; }
+}
+@media (forced-colors: active) {
+  #nullpath-profiles-sidebar { forced-color-adjust: auto; }
+  .nullpath-profile-header,.nullpath-profile-tab { border: 1px solid ButtonText; }
+  #nullpath-profiles-sidebar :focus-visible { outline: 2px solid Highlight; }
+}
+
 /* Horizontal tab strip: no tree. */
 #tabbrowser-tabs:not([orient="vertical"]) .nullpath-twisty {
   display: none;

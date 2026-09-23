@@ -11,19 +11,24 @@
 ##   $reason (String) - one-sentence reason from the "Needs attention" list
 
 nullpath-router-button-off =
-    .label = I2P router
+    .label = I2P
+    .aria-label = I2P: Not connected
     .tooltiptext = I2P router: Not connected
 nullpath-router-button-setup =
-    .label = I2P router
+    .label = I2P
+    .aria-label = I2P: Not connected. Set up I2P
     .tooltiptext = I2P router: Not connected. Set up I2P
 nullpath-router-button-connecting =
-    .label = I2P router
+    .label = I2P
+    .aria-label = I2P: Connecting…
     .tooltiptext = I2P router: Connecting…
 nullpath-router-button-connected =
-    .label = I2P router
+    .label = I2P
+    .aria-label = I2P: Connected
     .tooltiptext = I2P router: Connected
 nullpath-router-button-attention =
-    .label = I2P router
+    .label = I2P
+    .aria-label = I2P: Needs attention
     .tooltiptext = I2P router: Needs attention. { $reason ->
         [ROUTER_EXITED] Router stopped unexpectedly.
         [ROUTER_MISSING] The router program is missing.
@@ -36,6 +41,17 @@ nullpath-router-button-attention =
 ## Main view (§3.2)
 
 nullpath-router-title = I2P router
+nullpath-router-state-off = Not connected
+nullpath-router-state-connecting = Connecting…
+nullpath-router-state-connected = Connected
+nullpath-router-state-attention = Needs attention
+nullpath-router-identity-none = No router set up
+nullpath-router-identity-managed = i2pd · managed by Nullpath
+nullpath-router-identity-own = Your router · { $endpoint }
+nullpath-router-connect = Connect to I2P
+nullpath-router-setup = Set up I2P
+nullpath-router-details-label = Router details
+nullpath-router-ready = Ready for I2P sites
 nullpath-router-switch-on =
     .label = On
     .aria-label = I2P router: On
@@ -119,7 +135,7 @@ nullpath-router-relay-expire = Turning relaying off doesn’t cut existing relay
 nullpath-router-relay-external = Set this in your router’s bandwidth or sharing settings.
 
 nullpath-router-open-i2p-window = Open I2P window
-nullpath-router-console = Router console ↗
+nullpath-router-console = Router console
 nullpath-router-settings = Settings
 nullpath-router-help = Help
 
@@ -156,7 +172,7 @@ nullpath-chooser-whatis = What is I2P?
 nullpath-whatis-router = An I2P router is a separate program. It connects to other I2P routers over your ordinary internet connection.
 nullpath-whatis-browser-only = { -brand-short-name } sends only its own browser traffic through I2P.
 nullpath-whatis-other-apps = Other apps on this computer aren’t affected.
-nullpath-whatis-faq = I2P FAQ ↗
+nullpath-whatis-faq = I2P FAQ
 
 ## Own router form (§4.3)
 
@@ -271,7 +287,7 @@ nullpath-outproxy-needs-router = Set up a router first.
 nullpath-outproxy-destination = Outproxy (.i2p name or .b32.i2p address)
 nullpath-outproxy-note = Note about who runs it (optional)
 nullpath-outproxy-error-destination = Enter a .i2p name or .b32.i2p address.
-nullpath-outproxy-suggestions = Suggestions (I2P FAQ) ↗
+nullpath-outproxy-suggestions = Suggestions (I2P FAQ)
 nullpath-outproxy-ack = An outproxy is run by a third party, not by the I2P project or { -brand-short-name }. It can see which public websites you visit, and it can see the contents of any site that doesn’t use HTTPS. If it goes down, public-web browsing stops. { -brand-short-name } won’t switch to a direct connection.
 nullpath-outproxy-ack-check = I understand
 nullpath-outproxy-test = Test outproxy
@@ -301,6 +317,10 @@ nullpath-banner-not-connected = Not connected to I2P. Use the router button at t
 # Variables:
 #   $level (Number) - depth in the tab tree, starting at 1
 nullpath-tab-level = level { $level }
+nullpath-sidebar-expand = Expand sidebar
+nullpath-sidebar-collapse = Collapse sidebar
+nullpath-sidebar-no-tabs = No open tabs
+nullpath-sidebar-profiles = Profiles
 
 ## about:nullpath-blocked (§7.4, §8.4)
 

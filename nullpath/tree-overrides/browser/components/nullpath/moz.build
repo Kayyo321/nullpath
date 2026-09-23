@@ -18,6 +18,8 @@ XPCOM_MANIFESTS += [
 MOZ_SRC_FILES += [
     "actors/NullpathBlockedChild.sys.mjs",
     "actors/NullpathBlockedParent.sys.mjs",
+    "actors/NullpathNewTabChild.sys.mjs",
+    "actors/NullpathNewTabParent.sys.mjs",
     "network/NullpathAboutBlocked.sys.mjs",
     "network/NullpathChannelFilter.sys.mjs",
     "network/NullpathNetworkErrorObserver.sys.mjs",
@@ -33,6 +35,7 @@ MOZ_SRC_FILES += [
     "router/NullpathRouterManifest.sys.mjs",
     "router/NullpathRouterPanel.sys.mjs",
     "router/NullpathRouterWidget.sys.mjs",
+    "tabtree/NullpathTabBridge.sys.mjs",
     "tabtree/NullpathTabTree.sys.mjs",
 ]
 

@@ -38,11 +38,6 @@
   }
 }
 
-/* Dot badge until the panel has been opened once. */
-#nullpath-router-button[nullpath-setup-badge] > .toolbarbutton-icon {
-  background-image: radial-gradient(circle at 85% 15%, var(--color-accent-primary, AccentColor) 3px, transparent 3.5px);
-}
-
 #nullpath-router-urlbar-button {
   appearance: none;
   padding: 0 4px;
@@ -122,19 +117,7 @@
   &::before {
     position: absolute;
     inset-inline-start: -18px;
-    content: "○";
-  }
-
-  &.nullpath-step-running::before {
-    content: "◐";
-  }
-
-  &.nullpath-step-done::before {
-    content: "✓";
-  }
-
-  &.nullpath-step-failed::before {
-    content: "✗";
+    content: "";
   }
 }
 
@@ -258,6 +241,340 @@
   }
 }
 
+/* Nullpath product palette and stable router control. */
+:root {
+  --color-accent-primary: #181818;
+  --focus-outline-color: #181818;
+  --nullpath-canvas: #f7f7f7;
+  --nullpath-surface: #ffffff;
+  --nullpath-raised: #f0f0f0;
+  --nullpath-text: #181818;
+  --nullpath-secondary: #5c5c5c;
+  --nullpath-border: #dcdcdc;
+  --nullpath-accent: #181818;
+  --nullpath-accent-surface: #e8e8e8;
+  --nullpath-success: #333333;
+  --nullpath-warning: #444444;
+  --nullpath-error: #333333;
+  --nullpath-success-surface: #ededed;
+  --nullpath-warning-surface: #eeeeee;
+  --nullpath-hover: #e8e8e8;
+  accent-color: var(--nullpath-accent);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([nullpath-theme="light"]) {
+    color-scheme: dark;
+    --color-accent-primary: #ffffff;
+    --focus-outline-color: #ffffff;
+    --nullpath-canvas: #111111;
+    --nullpath-surface: #1c1c1c;
+    --nullpath-raised: #292929;
+    --nullpath-text: #f5f5f5;
+    --nullpath-secondary: #bcbcbc;
+    --nullpath-border: #505050;
+    --nullpath-accent: #ffffff;
+    --nullpath-accent-surface: #303030;
+    --nullpath-success: #eeeeee;
+    --nullpath-warning: #dedede;
+    --nullpath-error: #eeeeee;
+    --nullpath-success-surface: #292929;
+    --nullpath-warning-surface: #333333;
+    --nullpath-hover: #333333;
+  }
+}
+:root[nullpath-theme="dark"] {
+  --color-accent-primary: #ffffff;
+  --focus-outline-color: #ffffff;
+  color-scheme: dark;
+  --nullpath-canvas: #111111;
+  --nullpath-surface: #1c1c1c;
+  --nullpath-raised: #292929;
+  --nullpath-text: #f5f5f5;
+  --nullpath-secondary: #bcbcbc;
+  --nullpath-border: #505050;
+  --nullpath-accent: #ffffff;
+  --nullpath-accent-surface: #303030;
+  --nullpath-success: #eeeeee;
+  --nullpath-warning: #dedede;
+  --nullpath-error: #eeeeee;
+  --nullpath-success-surface: #292929;
+  --nullpath-warning-surface: #333333;
+  --nullpath-hover: #333333;
+}
+:root[nullpath-theme="light"] {
+  --color-accent-primary: #181818;
+  --focus-outline-color: #181818;
+  color-scheme: light;
+  --nullpath-canvas: #f7f7f7;
+  --nullpath-surface: #ffffff;
+  --nullpath-raised: #f0f0f0;
+  --nullpath-text: #181818;
+  --nullpath-secondary: #5c5c5c;
+  --nullpath-border: #dcdcdc;
+  --nullpath-accent: #181818;
+  --nullpath-accent-surface: #e8e8e8;
+  --nullpath-success: #333333;
+  --nullpath-warning: #444444;
+  --nullpath-error: #333333;
+  --nullpath-success-surface: #ededed;
+  --nullpath-warning-surface: #eeeeee;
+  --nullpath-hover: #e8e8e8;
+}
+:root[nullpath-router-disconnected] .searchmode-switcher,
+:root[nullpath-router-disconnected] #search-container { display: none !important; }
+
+#nullpath-router-button {
+  box-sizing: border-box;
+  width: 72px;
+  min-width: 72px;
+  height: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  margin-inline-start: 12px;
+  margin-inline-end: 8px;
+  gap: 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nullpath-text);
+  list-style-image: none;
+}
+#nullpath-router-button .toolbarbutton-icon::before { content: none; }
+#nullpath-router-urlbar-button {
+  box-sizing: border-box;
+  width: 58px;
+  min-width: 58px;
+  height: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--nullpath-border);
+  border-radius: 8px;
+  background-color: var(--nullpath-raised);
+  color: var(--nullpath-text);
+  margin-inline: 0 8px;
+}
+#nullpath-router-urlbar-button.nullpath-state-connecting { background-color: var(--nullpath-accent-surface); }
+#nullpath-router-urlbar-button.nullpath-state-connected { background-color: var(--nullpath-success-surface); }
+#nullpath-router-urlbar-button.nullpath-state-attention { background-color: var(--nullpath-warning-surface); }
+#nullpath-router-urlbar-button:hover { background-color: var(--nullpath-hover); }
+#nullpath-router-urlbar-button:active { border-color: var(--nullpath-accent); }
+.nullpath-urlbar-label { font: 600 11px/16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+#nullpath-router-button:hover { background: var(--nullpath-hover); }
+#nullpath-router-button:active { background: var(--nullpath-raised); }
+#nullpath-router-button.nullpath-state-connecting { color: var(--nullpath-accent); }
+#nullpath-router-button.nullpath-state-connected { color: var(--nullpath-success); }
+#nullpath-router-button.nullpath-state-attention { color: var(--nullpath-warning); }
+#nullpath-router-button > .toolbarbutton-icon {
+  display: none !important;
+}
+#nullpath-router-button > .toolbarbutton-text {
+  display: none !important;
+}
+.nullpath-state-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  background: center / 20px 20px no-repeat url("chrome://browser/skin/nullpath/router-off.svg");
+  -moz-context-properties: fill, fill-opacity;
+  fill: currentColor;
+}
+.nullpath-state-connecting .nullpath-state-icon {
+  background-image: url("chrome://browser/skin/nullpath/router-connecting.svg");
+  animation: nullpath-spin 1.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nullpath-state-connecting .nullpath-state-icon { animation: none; background-image: url("chrome://browser/skin/nullpath/router-connecting-static.svg"); }
+}
+.nullpath-state-connected .nullpath-state-icon { background-image: url("chrome://browser/skin/nullpath/router-connected.svg"); }
+.nullpath-state-attention .nullpath-state-icon { background-image: url("chrome://browser/skin/nullpath/router-attention.svg"); }
+.nullpath-router-short-label { font: 600 11px/16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.nullpath-router-drawer-chevron { width: 10px; height: 10px; flex: none; background: center/10px no-repeat url("chrome://global/skin/icons/arrow-down-12.svg"); -moz-context-properties: fill; fill: currentColor; }
+#nullpath-router-urlbar-button .toolbarbutton-icon { animation: none !important; }
+#nullpath-router-urlbar-button { list-style-image: none; animation: none !important; }
+#nullpath-router-button > .toolbarbutton-icon { list-style-image: none; background: none; }
+#nullpath-router-button[nullpath-setup-badge] { position: relative; background-image: none; }
+#nullpath-router-button[nullpath-setup-badge] > .toolbarbutton-icon { background-image: none !important; }
+#nullpath-router-button[nullpath-setup-badge]::after { content: ""; position: absolute; inset-block-start: 4px; inset-inline-end: 4px; width: 6px; height: 6px; border: 1px solid var(--nullpath-surface); border-radius: 50%; background: var(--nullpath-accent); }
+:root[nullpath-mode="direct"] #nullpath-mode-chip { background-image: none; }
+
+#nullpath-theme-button {
+  appearance: none;
+  box-sizing: border-box;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  margin: 0 4px 0 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent center / 18px 18px no-repeat url("chrome://browser/skin/nullpath/sun.svg");
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+#nullpath-theme-button:hover { background-color: var(--nullpath-hover); }
+#nullpath-theme-button, #downloads-button, #nullpath-router-button { align-self: center; }
+#nullpath-router-button { margin-inline-start: 16px; margin-inline-end: 12px; }
+#nullpath-theme-button .toolbarbutton-icon,
+#nullpath-theme-button .toolbarbutton-text { display: none !important; }
+:root[nullpath-theme="dark"] #nullpath-theme-button { background-image: url("chrome://browser/skin/nullpath/moon.svg"); }
+@media (prefers-color-scheme: dark) {
+  :root:not([nullpath-theme="light"]) #nullpath-theme-button { background-image: url("chrome://browser/skin/nullpath/moon.svg"); }
+}
+
+/* These values are chrome-only; the web content appearance remains under
+   resist-fingerprinting control. */
+:root[nullpath-theme="dark"] {
+  --toolbox-background-color: #111111;
+  --toolbox-background-color-inactive: #111111;
+  --toolbar-bgcolor: #1c1c1c;
+  --toolbar-color: #f5f5f5;
+  --toolbar-field-background-color: #292929;
+  --toolbar-field-focus-background-color: #292929;
+  --toolbar-field-color: #f5f5f5;
+  --toolbar-field-focus-color: #f5f5f5;
+  --toolbar-field-border-color: #505050;
+  --toolbar-color-scheme: dark;
+  --lwt-accent-color: #111111;
+  --lwt-text-color: #f5f5f5;
+}
+:root[nullpath-theme="light"] {
+  --toolbox-background-color: #f7f7f7;
+  --toolbox-background-color-inactive: #f7f7f7;
+  --toolbar-bgcolor: #f7f7f7;
+  --toolbar-color: #181818;
+  --toolbar-field-background-color: #f0f0f0;
+  --toolbar-field-focus-background-color: #fff;
+  --toolbar-field-color: #181818;
+  --toolbar-field-focus-color: #181818;
+  --toolbar-field-border-color: #dcdcdc;
+  --toolbar-color-scheme: light;
+  --lwt-accent-color: #f7f7f7;
+  --lwt-text-color: #181818;
+}
+
+/* Native panel dimensions and fixed header/body scroll behavior. */
+.nullpath-router-view { width: 376px; max-height: min(640px, calc(100vh - 24px)); background: var(--nullpath-surface); border-radius: 16px; }
+.nullpath-router-body {
+  box-sizing: border-box;
+  max-height: min(640px, calc(100vh - 24px));
+  overflow-y: auto;
+  padding: 16px;
+  gap: 16px;
+  color: var(--nullpath-text);
+  background: var(--nullpath-surface);
+  font: 13px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.nullpath-router-header { position: sticky; top: 0; z-index: 2; min-height: 72px; align-items: center; gap: 12px; background: var(--nullpath-surface); }
+.nullpath-router-brand { min-width: 0; display: flex; align-items: center; gap: 12px; }
+.nullpath-router-mark {
+  width: 32px; height: 32px; flex: none; border-radius: 8px;
+  background: var(--nullpath-accent-surface) center / 20px 20px no-repeat url("chrome://browser/skin/nullpath/router-off.svg");
+  -moz-context-properties: fill, fill-opacity;
+  fill: var(--nullpath-accent);
+}
+.nullpath-router-title { margin: 0; color: var(--nullpath-text); font: 700 17px/22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.nullpath-router-status { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--nullpath-text); font: 13px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.nullpath-router-identity { margin: 0; color: var(--nullpath-secondary); font-size: 12px; line-height: 17px; }
+.nullpath-state-shape { width: 16px; height: 16px; flex: none; background: center/16px no-repeat url("chrome://browser/skin/nullpath/router-off.svg"); -moz-context-properties: fill, fill-opacity; fill: currentColor; }
+.nullpath-state-connecting .nullpath-state-shape { background-image: url("chrome://browser/skin/nullpath/router-connecting-static.svg"); }
+.nullpath-state-connected .nullpath-state-shape { background-image: url("chrome://browser/skin/nullpath/router-connected.svg"); }
+.nullpath-state-attention .nullpath-state-shape { background-image: url("chrome://browser/skin/nullpath/router-attention.svg"); }
+.nullpath-router-section { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.nullpath-router-body h2 { margin: 0 0 4px; color: var(--nullpath-secondary); font: 700 11px/16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.nullpath-router-body hr { margin: 0; border-color: var(--nullpath-border); }
+.nullpath-mode-row { min-height: 52px; align-items: center; box-sizing: border-box; padding: 8px; margin: 0; border: 1px solid var(--nullpath-border); border-radius: 8px; color: var(--nullpath-text); }
+.nullpath-mode-row { display: flex; width: 100%; gap: 8px; background: transparent; text-align: start; cursor: pointer; }
+.nullpath-mode-row:hover:not(:disabled) { background: var(--nullpath-hover); }
+.nullpath-mode-row[disabled] { background: var(--nullpath-accent-surface); border-color: var(--nullpath-accent); }
+.nullpath-mode-status,.nullpath-settings-detail,.nullpath-router-help-text,.nullpath-router-note,.nullpath-router-identity { color: var(--nullpath-secondary); font-size: 12px; line-height: 17px; }
+.nullpath-mode-tag { border-radius: 999px; padding: 2px 8px; font-size: 11px; }
+.nullpath-router-action { width: 100%; min-height: 36px; }
+.nullpath-router-attention { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--nullpath-warning); border-radius: 12px; background: var(--nullpath-warning-surface); }
+.nullpath-router-ready { margin: 0; color: var(--nullpath-success); }
+.nullpath-mode-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; border-radius: 8px; background: var(--nullpath-raised); }
+.nullpath-mode-icon img { width: 20px; height: 20px; -moz-context-properties: fill, fill-opacity; fill: currentColor; }
+.nullpath-mode-copy { display: grid; min-width: 0; flex: 1; gap: 2px; text-align: start; }
+.nullpath-mode-name { font-weight: 600; }
+.nullpath-details-toggle,.nullpath-footer-row { appearance: none; display: flex; box-sizing: border-box; width: 100%; min-height: 36px; align-items: center; justify-content: space-between; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--nullpath-text); font: inherit; text-align: start; }
+.nullpath-details-toggle:hover,.nullpath-footer-row:hover { background: var(--nullpath-hover); }
+.nullpath-chevron { width: 16px; height: 16px; background: center/16px no-repeat url("chrome://global/skin/icons/arrow-down-12.svg"); }
+.nullpath-details-toggle[aria-expanded="true"] .nullpath-chevron { transform: rotate(180deg); }
+.nullpath-details-content { display: grid; gap: 8px; padding: 8px; }
+.nullpath-router-info { border-top: 1px solid var(--nullpath-border); padding-top: 8px; }
+.nullpath-router-footer { display: grid; grid-template-columns: 1fr; gap: 8px; border-top: 1px solid var(--nullpath-border); padding-top: 8px; }
+.nullpath-router-external-link::after { content: ""; display: inline-block; width: 16px; height: 16px; flex: none; margin-inline-start: 6px; background: center/12px no-repeat url("chrome://global/skin/icons/open-in-new-12.svg"); -moz-context-properties: fill; fill: currentColor; }
+.nullpath-router-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.nullpath-router-nav > button { box-sizing: border-box; min-height: 36px; margin: 0; }
+.nullpath-footer-button { appearance: none; width: 100%; padding: 0 12px; border: 1px solid var(--nullpath-border); border-radius: 6px; background: var(--nullpath-surface); color: var(--nullpath-text); font: 13px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-align: start; cursor: pointer; }
+.nullpath-footer-button:hover { background: var(--nullpath-hover); }
+.nullpath-footer-button:active { background: var(--nullpath-raised); }
+.nullpath-router-stages { display: grid; gap: 8px; margin: 0; padding-inline-start: 20px; }
+.nullpath-step::before { content: "" !important; width: 12px; height: 12px; border: 1px solid currentColor; border-radius: 50%; }
+.nullpath-step-running::before { border: 2px solid var(--nullpath-accent); border-inline-end-color: transparent; }
+.nullpath-step-done::before { background: var(--nullpath-success); border-color: var(--nullpath-success); }
+.nullpath-step-failed::before { background: var(--nullpath-error); border-color: var(--nullpath-error); }
+.nullpath-router-error { color: var(--nullpath-error); }
+.nullpath-choice { min-height: 52px; border-color: var(--nullpath-border); border-radius: 12px; background: var(--nullpath-surface); color: var(--nullpath-text); }
+.nullpath-choice:hover { background: var(--nullpath-hover); }
+.nullpath-field { gap: 4px; margin-block: 0; }
+.nullpath-field input,.nullpath-field select { min-height: 36px; border-radius: 8px; }
+.nullpath-router-body :focus-visible { outline: 2px solid var(--nullpath-accent); outline-offset: 2px; }
+
+#navigator-toolbox,
+#vertical-tabs,
+#sidebar-box,
+#tabbrowser-tabs,
+#tabbrowser-arrowscrollbox { color: var(--nullpath-text); }
+:root[nullpath-theme="dark"] #navigator-toolbox,
+:root[nullpath-theme="dark"] #vertical-tabs,
+:root[nullpath-theme="dark"] #sidebar-box { background-color: var(--nullpath-canvas); }
+@media (prefers-color-scheme: dark) {
+  :root:not([nullpath-theme="light"]) #navigator-toolbox,
+  :root:not([nullpath-theme="light"]) #vertical-tabs,
+  :root:not([nullpath-theme="light"]) #sidebar-box { background-color: var(--nullpath-canvas); }
+}
+#tabbrowser-tabs .tabbrowser-tab[selected] .tab-content { background: var(--nullpath-accent-surface); }
+#tabbrowser-tabs .tabbrowser-tab:hover:not([selected]) .tab-content { background: var(--nullpath-hover); }
+#tabbrowser-tabs .tabbrowser-tab .tab-content { color: var(--nullpath-text); border-radius: 8px; }
+:root { --arrowpanel-background: var(--nullpath-surface); --arrowpanel-color: var(--nullpath-text); --arrowpanel-border-color: var(--nullpath-border); }
+
+.panel-header { min-height: 52px; background: var(--nullpath-surface); color: var(--nullpath-text); }
+.panel-header > h1 { font: 600 15px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.panel-header > .panel-header-button { width: 36px; height: 36px; }
+.panel-header > .panel-header-label { font-size: 15px; font-weight: 600; }
+.nullpath-router-body :is(p, li, span, label, code) { overflow-wrap: anywhere; }
+.nullpath-router-body p { margin: 0; }
+.nullpath-router-body :is(button, input, select, moz-toggle) { min-height: 36px; }
+.nullpath-router-body .footer-button.primary {
+  background: var(--nullpath-accent);
+  border-color: var(--nullpath-accent);
+  color: var(--nullpath-canvas);
+}
+.nullpath-router-body > .nullpath-router-nav button { min-height: 36px; }
+
+@media (max-width: 699px) {
+  #vertical-tabs { position: absolute; z-index: 8; width: 272px; max-width: min(272px, 100vw); height: 100%; box-shadow: none; }
+  #vertical-tabs[collapsed="true"] { width: 46px; }
+}
+
+@media (forced-colors: active) {
+  #nullpath-router-button,.nullpath-mode-row,.nullpath-choice { border: 1px solid ButtonText; }
+  #nullpath-router-button,.nullpath-mode-row,.nullpath-choice,.nullpath-router-body { forced-color-adjust: auto; }
+  .nullpath-router-body :focus-visible { outline: 2px solid Highlight; }
+}
+
 .nullpath-password code {
   user-select: all;
   margin-inline-end: 6px;
@@ -304,9 +621,4 @@
       display: none;
     }
   }
-}
-
-/* Direct web: a fixed striped strip, a shape no I2P window has. */
-:root[nullpath-mode="direct"] #nullpath-mode-chip {
-  background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, currentColor 20%, transparent) 6px 12px);
 }

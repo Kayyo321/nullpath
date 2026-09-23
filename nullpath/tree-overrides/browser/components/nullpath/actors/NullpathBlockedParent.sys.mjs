@@ -19,13 +19,18 @@ const BLOCKED_PREFIX = "about:nullpath-blocked";
 
 export class NullpathBlockedParent extends JSWindowActorParent {
   #observer = () => this.#sendState();
+  #prefObserver = { observe: () => this.#sendState() };
 
   actorCreated() {
     Services.obs.addObserver(this.#observer, "nullpath-router-state-changed");
+    Services.obs.addObserver(this.#observer, "look-and-feel-changed");
+    Services.prefs.addObserver("nullpath.appearance", this.#prefObserver);
   }
 
   didDestroy() {
     Services.obs.removeObserver(this.#observer, "nullpath-router-state-changed");
+    Services.obs.removeObserver(this.#observer, "look-and-feel-changed");
+    Services.prefs.removeObserver("nullpath.appearance", this.#prefObserver);
   }
 
   get #browser() {
@@ -48,6 +53,9 @@ export class NullpathBlockedParent extends JSWindowActorParent {
         connected: router.isConnected,
         connecting: router.state == "connecting",
         publicWeb: router.publicWebReadiness(),
+        dark: Services.prefs.getStringPref("nullpath.appearance", "system") == "dark" ||
+          (Services.prefs.getStringPref("nullpath.appearance", "system") == "system" &&
+            !!this.#browser?.ownerGlobal?.matchMedia?.("(prefers-color-scheme: dark)").matches),
       });
     } catch (e) {
       // The page went away.

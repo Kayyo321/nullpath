@@ -4,3 +4,5 @@ run-if = ["os == 'win'"]
 ["browser_router_chooser.js"]
 
 ["browser_router_widget.js"]
+
+["browser_disconnected_design.js"]

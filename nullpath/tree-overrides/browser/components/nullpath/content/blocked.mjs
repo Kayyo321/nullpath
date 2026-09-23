@@ -80,6 +80,7 @@ function render() {
 
 /** Continues automatically once the path is ready (§7.4). */
 function onState({ detail }) {
+  document.documentElement.setAttribute("nullpath-theme", detail.dark ? "dark" : "light");
   let status = document.getElementById("blocked-status");
   if (detail.connecting) {
     document.l10n.setAttributes(status, "nullpath-blocked-status-connecting");

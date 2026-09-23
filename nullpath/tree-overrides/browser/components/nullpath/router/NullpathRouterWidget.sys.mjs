@@ -19,10 +19,14 @@ const lazy = XPCOMUtils.declareLazy({
     "moz-src:///browser/components/nullpath/router/NullpathRouter.sys.mjs",
   NullpathRouterPanel:
     "moz-src:///browser/components/nullpath/router/NullpathRouterPanel.sys.mjs",
+  NullpathProfileMode:
+    "moz-src:///browser/components/nullpath/network/NullpathProfileMode.sys.mjs",
+  Modes: "moz-src:///browser/components/nullpath/network/NullpathProfileMode.sys.mjs",
   VIEWS: "moz-src:///browser/components/nullpath/router/NullpathRouterPanel.sys.mjs",
 });
 
 const WIDGET_ID = "nullpath-router-button";
+const THEME_WIDGET_ID = "nullpath-theme-button";
 const URLBAR_ICON_ID = "nullpath-router-urlbar-button";
 const STYLESHEET = "chrome://browser/content/nullpath/router-panel.css";
 const FTL = "browser/nullpath/router.ftl";
@@ -62,7 +66,19 @@ class RouterWidget {
       onViewShowing: e => this.#panelFor(e.target.documentGlobal)?.showing(e.target),
       onViewHiding: () => {},
     });
+    lazy.CustomizableUI.createWidget({
+      id: THEME_WIDGET_ID,
+      type: "button",
+      defaultArea: lazy.CustomizableUI.AREA_NAVBAR,
+      removable: false,
+      overflows: false,
+      showInPrivateBrowsing: true,
+      onCreated: node => this.#prepareThemeButton(node),
+      onCommand: event => this.#toggleTheme(event.target.ownerDocument.defaultView),
+    });
     Services.obs.addObserver(this.#observer, "nullpath-router-state-changed");
+    Services.prefs.addObserver("nullpath.appearance", this.#themeObserver);
+    Services.obs.addObserver(this.#themeObserver, "look-and-feel-changed");
   }
 
   /**
@@ -80,8 +96,22 @@ class RouterWidget {
     if (!placement || placement.area != CUI.AREA_NAVBAR) {
       CUI.addWidgetToArea(WIDGET_ID, CUI.AREA_NAVBAR);
     }
-    let count = CUI.getWidgetIdsInArea(CUI.AREA_NAVBAR).length;
-    CUI.moveWidgetWithinArea(WIDGET_ID, count);
+    let ids = CUI.getWidgetIdsInArea(CUI.AREA_NAVBAR);
+    if (!ids.includes(THEME_WIDGET_ID)) {
+      CUI.addWidgetToArea(THEME_WIDGET_ID, CUI.AREA_NAVBAR);
+      ids = CUI.getWidgetIdsInArea(CUI.AREA_NAVBAR);
+    }
+    let downloads = ids.indexOf("downloads-button");
+    let theme = ids.indexOf(THEME_WIDGET_ID);
+    if (downloads >= 0 && theme != downloads + 1) {
+      CUI.moveWidgetWithinArea(THEME_WIDGET_ID, downloads + 1);
+    }
+    // Keep the router on its own island immediately before Downloads.
+    ids = CUI.getWidgetIdsInArea(CUI.AREA_NAVBAR);
+    downloads = ids.indexOf("downloads-button");
+    if (downloads >= 0 && ids.indexOf(WIDGET_ID) != downloads - 1) {
+      CUI.moveWidgetWithinArea(WIDGET_ID, downloads);
+    }
   }
 
   /** Stylesheet, strings and panelviews for a new window. */
@@ -128,10 +158,63 @@ class RouterWidget {
     // The node isn't in the document yet. Don't use
     // CustomizableUI.getWidget().forWindow() here: CustomizableUI hasn't
     // recorded this node yet, so it would build (and cache) a second one.
+    this.#prepareRouterButton(node);
     this.updateButton(win, node);
     if (win.document.documentElement.getAttribute("chromehidden")?.includes("toolbar")) {
       this.#addUrlbarButton(win);
     }
+  }
+
+  #prepareRouterButton(node) {
+    if (node.id == URLBAR_ICON_ID) return;
+    if (node.querySelector(".nullpath-state-icon")) return;
+    let doc = node.ownerDocument;
+    let inner = doc.createElementNS("http://www.w3.org/1999/xhtml", "span");
+    inner.className = "nullpath-state-icon";
+    inner.setAttribute("aria-hidden", "true");
+    let label = doc.createElementNS("http://www.w3.org/1999/xhtml", "span");
+    label.className = "nullpath-router-short-label";
+    label.textContent = "I2P";
+    label.setAttribute("aria-hidden", "true");
+    let chevron = doc.createElementNS("http://www.w3.org/1999/xhtml", "span");
+    chevron.className = "nullpath-router-drawer-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    node.append(inner, label, chevron);
+  }
+
+  #prepareThemeButton(node) {
+    node.setAttribute("class", `${node.getAttribute("class") ?? ""} nullpath-theme-button`);
+    let win = node.ownerDocument.defaultView;
+    this.#applyTheme(win, node);
+  }
+
+  #themeObserver = () => {
+    for (let win of Services.wm.getEnumerator("navigator:browser")) {
+      if (!win.closed) this.#applyTheme(win);
+    }
+  };
+
+  #applyTheme(win, createdButton = null) {
+    if (!win?.document?.documentElement) return;
+    let root = win.document.documentElement;
+    let choice = Services.prefs.getStringPref("nullpath.appearance", "system");
+    if (choice == "system") root.removeAttribute("nullpath-theme");
+    else root.setAttribute("nullpath-theme", choice);
+    let dark = choice == "dark" || (choice == "system" && win.matchMedia("(prefers-color-scheme: dark)").matches);
+    let mode = dark ? "Dark mode" : "Light mode";
+    let button = createdButton ?? win.document.getElementById(THEME_WIDGET_ID);
+    if (button) {
+      button.setAttribute("label", mode);
+      button.setAttribute("tooltiptext", mode);
+      button.setAttribute("aria-label", mode);
+    }
+  }
+
+  #toggleTheme(win) {
+    let choice = Services.prefs.getStringPref("nullpath.appearance", "system");
+    let dark = choice == "dark" || (choice == "system" && win.matchMedia("(prefers-color-scheme: dark)").matches);
+    Services.prefs.setStringPref("nullpath.appearance", dark ? "light" : "dark");
+    this.#themeObserver();
   }
 
   /**
@@ -151,17 +234,39 @@ class RouterWidget {
     button.id = URLBAR_ICON_ID;
     button.className = "nullpath-router-urlbar-button";
     button.setAttribute("tabindex", "0");
+    let stateIcon = doc.createElementNS("http://www.w3.org/1999/xhtml", "span");
+    stateIcon.className = "nullpath-state-icon";
+    stateIcon.setAttribute("aria-hidden", "true");
+    let label = doc.createElementNS("http://www.w3.org/1999/xhtml", "span");
+    label.className = "nullpath-urlbar-label";
+    label.textContent = "I2P";
+    button.append(stateIcon, label);
     button.addEventListener("command", () => {
       win.PanelUI.showSubView(lazy.VIEWS.MAIN, button);
     });
     identityBox.before(button);
     this.updateButton(win);
+    this.#applyTheme(win);
   }
 
   updateButton(win, newNode = null) {
     let router = lazy.NullpathRouter;
     let state = router.state;
     let doc = win.document;
+    let disconnected = lazy.NullpathProfileMode.mode != lazy.Modes.DIRECT && state != "connected";
+    doc.documentElement.toggleAttribute("nullpath-router-disconnected", disconnected);
+    let urlInput = doc.getElementById("urlbar-input");
+    if (urlInput) {
+      if (disconnected) {
+        if (!urlInput.hasAttribute("data-nullpath-original-placeholder")) {
+          urlInput.setAttribute("data-nullpath-original-placeholder", urlInput.getAttribute("placeholder") ?? "");
+        }
+        urlInput.setAttribute("placeholder", "Enter an I2P address");
+      } else if (urlInput.hasAttribute("data-nullpath-original-placeholder")) {
+        urlInput.setAttribute("placeholder", urlInput.getAttribute("data-nullpath-original-placeholder"));
+        urlInput.removeAttribute("data-nullpath-original-placeholder");
+      }
+    }
     let nodes = [
       newNode ?? doc.getElementById(WIDGET_ID),
       doc.getElementById(URLBAR_ICON_ID),

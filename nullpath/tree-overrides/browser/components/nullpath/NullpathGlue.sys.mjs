@@ -11,7 +11,6 @@
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const lazy = XPCOMUtils.declareLazy({
-  MODE_L10N: "moz-src:///browser/components/nullpath/network/NullpathProfileMode.sys.mjs",
   Modes: "moz-src:///browser/components/nullpath/network/NullpathProfileMode.sys.mjs",
   NullpathChannelFilter:
     "moz-src:///browser/components/nullpath/network/NullpathChannelFilter.sys.mjs",
@@ -29,7 +28,6 @@ const lazy = XPCOMUtils.declareLazy({
     "moz-src:///browser/components/nullpath/tabtree/NullpathTabTree.sys.mjs",
 });
 
-const BANNER_ID = "nullpath-not-connected";
 const VERTICAL_TABS_DONE_PREF = "nullpath.tabtree.verticalTabsSet";
 
 function registerActor() {
@@ -44,6 +42,23 @@ function registerActor() {
       },
     },
     matches: ["about:nullpath-blocked", "about:nullpath-blocked?*"],
+    allFrames: false,
+  });
+  ChromeUtils.registerWindowActor("NullpathNewTab", {
+    parent: {
+      esModuleURI: "moz-src:///browser/components/nullpath/actors/NullpathNewTabParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "moz-src:///browser/components/nullpath/actors/NullpathNewTabChild.sys.mjs",
+      // A window actor is lazy: this real document event creates it for every
+      // new-tab/home page. A synthetic message name never did.
+      events: {
+        DOMDocElementInserted: {},
+        DOMContentLoaded: { capture: true },
+      },
+    },
+    matches: ["about:newtab*", "about:home*"],
+    remoteTypes: ["privilegedabout"],
     allFrames: false,
   });
 }
@@ -85,68 +100,28 @@ export const NullpathGlue = {
   onWindowReady(win) {
     lazy.NullpathTabTree.onWindowReady(win);
     this.labelWindow(win);
-    this.maybeShowBanner(win);
+    // New-tab actors can miss the first document event during startup.
+    // Activating the parent sends the current router state to the page.
+    let activateNewTab = () => {
+      for (let browser of win.gBrowser?.browsers ?? []) {
+        if (["about:newtab", "about:home"].includes(browser.currentURI?.spec)) {
+          browser.browsingContext.currentWindowGlobal?.getActor("NullpathNewTab");
+        }
+      }
+    };
+    win.gBrowser?.addEventListener("DOMContentLoaded", activateNewTab, true);
+    win.addEventListener("unload", () => win.gBrowser?.removeEventListener("DOMContentLoaded", activateNewTab, true), { once: true });
+    activateNewTab();
   },
 
   /**
-   * Labels the window with its mode: a text chip with an icon at the top of
-   * the vertical tab strip, and an attribute for mode-specific styling
-   * (§10). The window title already carries the profile name.
+   * Adds the window's immutable profile mode for chrome-only styling. The
+   * profile directory in the sidebar shows the full mode labels.
    */
   labelWindow(win) {
     let doc = win.document;
     let mode = lazy.NullpathProfileMode.mode;
     doc.documentElement.setAttribute("nullpath-mode", mode);
-    if (doc.getElementById("nullpath-mode-chip")) {
-      return;
-    }
-    let chip = doc.createXULElement("hbox");
-    chip.id = "nullpath-mode-chip";
-    chip.setAttribute("role", "note");
-    let icon = doc.createElementNS("http://www.w3.org/1999/xhtml", "img");
-    icon.src = `chrome://browser/skin/nullpath/mode-${mode == lazy.Modes.SITES ? "sites" : mode == lazy.Modes.PUBLIC_WEB ? "publicweb" : "direct"}.svg`;
-    icon.alt = "";
-    let label = doc.createXULElement("label");
-    doc.l10n.setAttributes(label, lazy.MODE_L10N[mode]);
-    chip.append(icon, label);
-    doc.getElementById("vertical-tabs")?.prepend(chip);
   },
 
-  /**
-   * The first I2P sites window says it isn't connected (§7.1). The banner
-   * goes away once the router connects.
-   */
-  maybeShowBanner(win) {
-    if (lazy.NullpathProfileMode.mode == lazy.Modes.DIRECT || lazy.NullpathRouter.isConnected) {
-      return;
-    }
-    let box = win.gNotificationBox;
-    if (!box || box.getNotificationWithValue(BANNER_ID)) {
-      return;
-    }
-    win.MozXULElement?.insertFTLIfNeeded("browser/nullpath/router.ftl");
-    box.appendNotification(
-      BANNER_ID,
-      {
-        label: { "l10n-id": "nullpath-banner-not-connected" },
-        priority: box.PRIORITY_INFO_MEDIUM,
-      },
-      [
-        {
-          "l10n-id": "nullpath-blocked-open-panel",
-          callback: () => {
-            lazy.NullpathRouterWidget.openPanel(win);
-            return true;
-          },
-        },
-      ]
-    );
-    let observer = () => {
-      if (lazy.NullpathRouter.isConnected || win.closed) {
-        box.getNotificationWithValue(BANNER_ID)?.close();
-        Services.obs.removeObserver(observer, "nullpath-router-state-changed");
-      }
-    };
-    Services.obs.addObserver(observer, "nullpath-router-state-changed");
-  },
 };
