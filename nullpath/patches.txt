@@ -4,3 +4,4 @@
 
 patches/windows-uninstall-reset-key.patch
 patches/nullpath-components.patch
+patches/i2p-secure-context.patch

@@ -1,0 +1,180 @@
+diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
+--- a/modules/libpref/init/StaticPrefList.yaml
++++ b/modules/libpref/init/StaticPrefList.yaml
+@@ -4927,6 +4927,13 @@
+   value: false
+   mirror: always
+ 
++# Nullpath: treat .i2p hosts as potentially trustworthy, like .onion above.
++# I2P encrypts traffic end to end, so http:// on an .i2p site isn't plaintext.
++- name: dom.securecontext.allowlist_i2p
++  type: bool
++  value: false
++  mirror: always
++
+ # This pref enables the featurePolicy header support.
+ - name: dom.security.featurePolicy.header.enabled
+   type: bool
+diff --git a/dom/security/nsMixedContentBlocker.cpp b/dom/security/nsMixedContentBlocker.cpp
+--- a/dom/security/nsMixedContentBlocker.cpp
++++ b/dom/security/nsMixedContentBlocker.cpp
+@@ -249,17 +249,21 @@
+ }
+ 
+ /* Maybe we have a .onion URL. Treat it as trustworthy as well if
+- * `dom.securecontext.allowlist_onions` is `true`.
++ * `dom.securecontext.allowlist_onions` is `true`. Nullpath: the same goes
++ * for .i2p URLs when `dom.securecontext.allowlist_i2p` is `true`.
+  */
+ bool nsMixedContentBlocker::IsPotentiallyTrustworthyOnion(nsIURI* aURL) {
+-  if (!StaticPrefs::dom_securecontext_allowlist_onions()) {
++  bool onions = StaticPrefs::dom_securecontext_allowlist_onions();
++  bool i2p = StaticPrefs::dom_securecontext_allowlist_i2p();
++  if (!onions && !i2p) {
+     return false;
+   }
+ 
+   nsAutoCString host;
+   nsresult rv = aURL->GetHost(host);
+   NS_ENSURE_SUCCESS(rv, false);
+-  return StringEndsWith(host, ".onion"_ns);
++  return (onions && StringEndsWith(host, ".onion"_ns)) ||
++         (i2p && StringEndsWith(host, ".i2p"_ns));
+ }
+ 
+ // static
+@@ -354,7 +358,8 @@
+   }
+ 
+   // Maybe we have a .onion URL. Treat it as trustworthy as well if
+-  // `dom.securecontext.allowlist_onions` is `true`.
++  // `dom.securecontext.allowlist_onions` is `true` (Nullpath: or a .i2p URL
++  // with `dom.securecontext.allowlist_i2p`).
+   if (nsMixedContentBlocker::IsPotentiallyTrustworthyOnion(aURI)) {
+     return true;
+   }
+diff --git a/browser/base/content/browser-siteIdentity.js b/browser/base/content/browser-siteIdentity.js
+--- a/browser/base/content/browser-siteIdentity.js
++++ b/browser/base/content/browser-siteIdentity.js
+@@ -197,6 +197,18 @@
+     );
+   },
+ 
++  /**
++   * Nullpath: an .i2p site. I2P encrypts it end to end, and Gecko treats it
++   * as a secure context (dom.securecontext.allowlist_i2p).
++   */
++  get _isI2PSite() {
++    return (
++      this._isPotentiallyTrustworthy &&
++      this._uriHasHost &&
++      this._uri.host.endsWith(".i2p")
++    );
++  },
++
+   get _isAboutBlockedPage() {
+     let { documentURI } = gBrowser.selectedBrowser;
+     return documentURI?.scheme == "about" && documentURI.filePath == "blocked";
+@@ -957,6 +969,9 @@
+       // Network errors, blocked pages, and pages associated
+       // with another page get a more neutral icon
+       this._identityBox.className = "unknownIdentity";
++    } else if (this._isI2PSite) {
++      // Nullpath: encrypted end to end by I2P.
++      this._identityBox.className = "verifiedDomain";
+     } else if (this._isPotentiallyTrustworthy) {
+       // This is a local resource (and shouldn't be marked insecure).
+       this._identityBox.className = "localResource";
+@@ -1053,6 +1068,8 @@
+       return "net-error-page";
+     } else if (this._isAssociatedIdentity) {
+       return "associated";
++    } else if (this._isI2PSite) {
++      return "secure-i2p";
+     } else if (this._isPotentiallyTrustworthy) {
+       return "file";
+     }
+diff --git a/browser/base/content/browser-trustPanel.js b/browser/base/content/browser-trustPanel.js
+--- a/browser/base/content/browser-trustPanel.js
++++ b/browser/base/content/browser-trustPanel.js
+@@ -1520,6 +1520,18 @@
+     );
+   }
+ 
++  /**
++   * Nullpath: an .i2p site. I2P encrypts it end to end, and Gecko treats it
++   * as a secure context (dom.securecontext.allowlist_i2p).
++   */
++  get #isI2PSite() {
++    return (
++      this.#isPotentiallyTrustworthy &&
++      this.#uriHasHost &&
++      this.#uri.host.endsWith(".i2p")
++    );
++  }
++
+   get #isAboutBlockedPage() {
+     let { documentURI } = gBrowser.selectedBrowser;
+     return documentURI?.scheme == "about" && documentURI.filePath == "blocked";
+@@ -1643,6 +1655,8 @@
+       connection = "net-error-page";
+     } else if (this.#isAssociatedIdentity) {
+       connection = "associated";
++    } else if (this.#isI2PSite) {
++      connection = "secure-i2p";
+     } else if (this.#isPotentiallyTrustworthy) {
+       connection = "file";
+     }
+diff --git a/browser/components/controlcenter/content/identityPanel.inc.xhtml b/browser/components/controlcenter/content/identityPanel.inc.xhtml
+--- a/browser/components/controlcenter/content/identityPanel.inc.xhtml
++++ b/browser/components/controlcenter/content/identityPanel.inc.xhtml
+@@ -35,6 +35,8 @@
+                         when-connection="not-secure secure-cert-user-overridden secure-custom-root cert-error-page https-only-error-page" data-l10n-id="identity-connection-not-secure"></label>
+             <label class="identity-popup-connection-secure"
+                         when-connection="secure secure-ev secure-etsi" data-l10n-id="identity-connection-secure"></label>
++            <label class="identity-popup-connection-secure"
++                        when-connection="secure-i2p" data-l10n-id="nullpath-identity-connection-i2p"></label>
+             <label class="identity-popup-connection-failure"
+                         when-connection="net-error-page" data-l10n-id="identity-connection-failure"></label>
+             <label when-connection="chrome" data-l10n-id="identity-connection-internal"></label>
+diff --git a/browser/components/controlcenter/content/securityInformation.inc.xhtml b/browser/components/controlcenter/content/securityInformation.inc.xhtml
+--- a/browser/components/controlcenter/content/securityInformation.inc.xhtml
++++ b/browser/components/controlcenter/content/securityInformation.inc.xhtml
+@@ -13,6 +13,7 @@
+                are only visible here under the trustpanel -->
+           <box class="only-trustpanel">
+             <description when-connection="chrome" data-l10n-id="identity-connection-internal"></description>
++            <description when-connection="secure-i2p" data-l10n-id="nullpath-identity-connection-i2p-details"></description>
+             <description when-connection="file" data-l10n-id="identity-connection-file"></description>
+             <description when-connection="associated" data-l10n-id="identity-connection-associated"></description>
+             <description when-connection="extension" data-l10n-id="identity-extension-page"></description >
+diff --git a/browser/components/controlcenter/content/trustPanel.inc.xhtml b/browser/components/controlcenter/content/trustPanel.inc.xhtml
+--- a/browser/components/controlcenter/content/trustPanel.inc.xhtml
++++ b/browser/components/controlcenter/content/trustPanel.inc.xhtml
+@@ -36,13 +36,13 @@
+         <vbox id="trustpanel-graphic-section">
+           <hbox class="trustpanel-card-main">
+             <vbox id="trustpanel-graphic-section-text" class="trustpanel-card-content">
+-              <label when-connection="secure secure-ev secure-etsi secure-cert-user-overridden chrome file extension net-error-page https-only-error-page"
++              <label when-connection="secure secure-ev secure-etsi secure-i2p secure-cert-user-overridden chrome file extension net-error-page https-only-error-page"
+                      id="trustpanel-header"
+                      class="trustpanel-header"></label>
+               <label when-connection="not-secure cert-error-page"
+                      class="trustpanel-header"
+                      data-l10n-id="trustpanel-header-enabled-insecure"></label>
+-              <label when-connection="secure secure-ev secure-etsi secure-cert-user-overridden chrome file extension net-error-page https-only-error-page"
++              <label when-connection="secure secure-ev secure-etsi secure-i2p secure-cert-user-overridden chrome file extension net-error-page https-only-error-page"
+                      id="trustpanel-description"></label>
+               <label when-connection="not-secure cert-error-page"
+                      data-l10n-id="trustpanel-description-enabled-insecure"></label>
+diff --git a/browser/themes/shared/controlcenter/panel.css b/browser/themes/shared/controlcenter/panel.css
+--- a/browser/themes/shared/controlcenter/panel.css
++++ b/browser/themes/shared/controlcenter/panel.css
+@@ -69,6 +69,7 @@
+ .site-information-popup[connection=secure-ev] [when-connection~=secure-ev],
+ .site-information-popup[connection=secure-etsi] [when-connection~=secure-etsi],
+ .site-information-popup[connection=secure] [when-connection~=secure],
++.site-information-popup[connection=secure-i2p] [when-connection~=secure-i2p],
+ .site-information-popup[connection=chrome] [when-connection~=chrome],
+ .site-information-popup[connection=file] [when-connection~=file],
+ .site-information-popup[connection=associated] [when-connection~=associated],

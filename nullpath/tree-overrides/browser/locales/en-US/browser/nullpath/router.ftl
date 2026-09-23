@@ -331,3 +331,8 @@ nullpath-blocked-go-back = Go back
 nullpath-blocked-switch-window = Switch to that window
 nullpath-blocked-status-connecting = Connecting…
 
+## Site information for .i2p pages, which Nullpath treats as secure because
+## I2P encrypts them end to end.
+
+nullpath-identity-connection-i2p = Connected securely through I2P
+nullpath-identity-connection-i2p-details = This site is on the I2P network. I2P encrypts the connection end to end and hides where both you and the site are, so it doesn’t need HTTPS.
