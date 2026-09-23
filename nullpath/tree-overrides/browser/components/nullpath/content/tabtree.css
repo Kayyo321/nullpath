@@ -1,0 +1,42 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Tree indentation for vertical tabs (§10), capped at six levels. */
+#tabbrowser-tabs[orient="vertical"] {
+  --nullpath-indent: 14px;
+
+  .tabbrowser-tab:not([pinned]) {
+    padding-inline-start: calc(var(--nullpath-indent) * var(--nullpath-level, 0));
+  }
+
+  .tabbrowser-tab[nullpath-depth="1"] { --nullpath-level: 1; }
+  .tabbrowser-tab[nullpath-depth="2"] { --nullpath-level: 2; }
+  .tabbrowser-tab[nullpath-depth="3"] { --nullpath-level: 3; }
+  .tabbrowser-tab[nullpath-depth="4"] { --nullpath-level: 4; }
+  .tabbrowser-tab[nullpath-depth="5"] { --nullpath-level: 5; }
+  .tabbrowser-tab[nullpath-depth="6"] { --nullpath-level: 6; }
+}
+
+.nullpath-twisty {
+  width: 12px;
+  height: 12px;
+  margin-inline-end: 2px;
+  list-style-image: url("chrome://global/skin/icons/arrow-down-12.svg");
+  -moz-context-properties: fill;
+  fill: currentColor;
+  flex-shrink: 0;
+
+  &[collapsed-tree] {
+    list-style-image: url("chrome://global/skin/icons/arrow-right-12.svg");
+
+    &:-moz-locale-dir(rtl) {
+      list-style-image: url("chrome://global/skin/icons/arrow-left-12.svg");
+    }
+  }
+}
+
+/* Horizontal tab strip: no tree. */
+#tabbrowser-tabs:not([orient="vertical"]) .nullpath-twisty {
+  display: none;
+}

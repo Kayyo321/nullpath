@@ -1,0 +1,12 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+browser.jar:
+    content/browser/nullpath/router-panel.css (content/router-panel.css)
+    content/browser/nullpath/tabtree.css (content/tabtree.css)
+    content/browser/nullpath/blocked.html (content/blocked.html)
+    content/browser/nullpath/blocked.mjs (content/blocked.mjs)
+    content/browser/nullpath/blocked.css (content/blocked.css)
+    content/browser/nullpath/router-attention.svg (../../themes/shared/nullpath/router-attention.svg)
+    skin/classic/browser/nullpath (../../themes/shared/nullpath/*.svg)

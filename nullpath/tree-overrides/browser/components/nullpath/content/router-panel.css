@@ -1,0 +1,312 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* ---- Toolbar button (§2.2): a different icon shape per state ---- */
+
+#nullpath-router-button,
+#nullpath-router-urlbar-button {
+  list-style-image: url("chrome://browser/skin/nullpath/router-off.svg");
+}
+
+:is(#nullpath-router-button, #nullpath-router-urlbar-button).nullpath-state-connecting {
+  list-style-image: url("chrome://browser/skin/nullpath/router-connecting.svg");
+
+  @media (prefers-reduced-motion: no-preference) {
+    & .toolbarbutton-icon,
+    &:is(#nullpath-router-urlbar-button) {
+      animation: nullpath-spin 1.2s linear infinite;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    list-style-image: url("chrome://browser/skin/nullpath/router-connecting-static.svg");
+  }
+}
+
+:is(#nullpath-router-button, #nullpath-router-urlbar-button).nullpath-state-connected {
+  list-style-image: url("chrome://browser/skin/nullpath/router-connected.svg");
+}
+
+:is(#nullpath-router-button, #nullpath-router-urlbar-button).nullpath-state-attention {
+  list-style-image: url("chrome://browser/skin/nullpath/router-attention.svg");
+}
+
+@keyframes nullpath-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Dot badge until the panel has been opened once. */
+#nullpath-router-button[nullpath-setup-badge] > .toolbarbutton-icon {
+  background-image: radial-gradient(circle at 85% 15%, var(--color-accent-primary, AccentColor) 3px, transparent 3.5px);
+}
+
+#nullpath-router-urlbar-button {
+  appearance: none;
+  padding: 0 4px;
+  margin-inline-end: 2px;
+  -moz-context-properties: fill;
+  fill: currentColor;
+
+  > .toolbarbutton-text {
+    display: none;
+  }
+}
+
+/* ---- Panel (§3.1): 340 px wide, at most 560 px tall ---- */
+
+.nullpath-router-view {
+  width: 340px;
+  max-height: 560px;
+}
+
+.nullpath-router-body {
+  overflow-y: auto;
+  padding: var(--space-medium, 8px) var(--space-large, 12px);
+  gap: var(--space-small, 6px);
+
+  h1 {
+    font-size: var(--font-size-large, 1.2em);
+    font-weight: var(--font-weight-bold, 600);
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 1em;
+    font-weight: var(--font-weight-bold, 600);
+    margin: 4px 0;
+  }
+
+  p {
+    margin: 2px 0;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--panel-separator-color);
+    margin: 4px calc(-1 * var(--space-large, 12px));
+    width: auto;
+  }
+}
+
+.nullpath-router-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nullpath-router-status {
+  color: var(--text-color-deemphasized);
+
+  &.nullpath-state-connected {
+    color: var(--icon-color-success, inherit);
+  }
+
+  &.nullpath-state-attention {
+    color: var(--icon-color-critical, inherit);
+  }
+}
+
+.nullpath-router-stages {
+  margin: 4px 0;
+  padding-inline-start: 20px;
+}
+
+.nullpath-step {
+  list-style: none;
+  position: relative;
+
+  &::before {
+    position: absolute;
+    inset-inline-start: -18px;
+    content: "○";
+  }
+
+  &.nullpath-step-running::before {
+    content: "◐";
+  }
+
+  &.nullpath-step-done::before {
+    content: "✓";
+  }
+
+  &.nullpath-step-failed::before {
+    content: "✗";
+  }
+}
+
+.nullpath-mode-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-inline: calc(-1 * var(--space-medium, 8px));
+
+  &[disabled] {
+    opacity: 1;
+  }
+}
+
+.nullpath-mode-status,
+.nullpath-mode-tag,
+.nullpath-settings-detail,
+.nullpath-router-help-text,
+.nullpath-router-note {
+  color: var(--text-color-deemphasized);
+  font-size: 0.9em;
+}
+
+.nullpath-mode-tag {
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding-inline: 4px;
+}
+
+.nullpath-router-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nullpath-router-buttons,
+.nullpath-router-nav,
+.nullpath-router-attention {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-block: 4px;
+}
+
+.nullpath-router-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.nullpath-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: start;
+  gap: 4px;
+  padding: 8px;
+  margin-block: 4px;
+  border: 1px solid var(--panel-separator-color);
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+
+  &:hover {
+    background-color: var(--panel-item-hover-bgcolor);
+  }
+}
+
+.nullpath-choice-title {
+  display: flex;
+  justify-content: space-between;
+  font-weight: var(--font-weight-bold, 600);
+}
+
+.nullpath-choice-tag {
+  font-weight: normal;
+  font-size: 0.85em;
+  color: var(--color-accent-primary, AccentColor);
+}
+
+.nullpath-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-block: 4px;
+
+  input,
+  select {
+    font: inherit;
+  }
+}
+
+.nullpath-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.nullpath-router-error {
+  color: var(--text-color-error, var(--icon-color-critical));
+  font-size: 0.9em;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.nullpath-router-ack {
+  margin: 4px 0;
+  padding-inline-start: 8px;
+  border-inline-start: 3px solid var(--panel-separator-color);
+}
+
+.nullpath-setup-explain {
+  padding-inline-start: 18px;
+
+  li {
+    margin-block: 4px;
+  }
+}
+
+.nullpath-password code {
+  user-select: all;
+  margin-inline-end: 6px;
+}
+
+/* ---- Mode label on each window (§10) ---- */
+
+/* #vertical-tabs lays out in a row; stack the chip above the tab list. */
+#vertical-tabs:has(> #nullpath-mode-chip) {
+  flex-direction: column;
+
+  > #tabbrowser-tabs {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+#nullpath-mode-chip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin: 6px;
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-weight: var(--font-weight-bold, 600);
+  -moz-context-properties: fill;
+  fill: currentColor;
+
+  > img {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Collapsed sidebar: icon only (the window title still names the mode). */
+@container vertical-tabs-container (width < 120px) {
+  #nullpath-mode-chip {
+    justify-content: center;
+    padding-inline: 0;
+
+    > label {
+      display: none;
+    }
+  }
+}
+
+/* Direct web: a fixed striped strip, a shape no I2P window has. */
+:root[nullpath-mode="direct"] #nullpath-mode-chip {
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, currentColor 20%, transparent) 6px 12px);
+}

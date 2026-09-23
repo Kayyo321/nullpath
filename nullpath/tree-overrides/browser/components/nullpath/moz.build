@@ -1,0 +1,40 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Nullpath: I2P router control, fail-closed routing and tree tabs.
+# See docs/nullpath/I2P-ROUTER-TOGGLE.md.
+
+JAR_MANIFESTS += ["jar.mn"]
+
+EXTRA_COMPONENTS += [
+    "NullpathComponents.manifest",
+]
+
+XPCOM_MANIFESTS += [
+    "components.conf",
+]
+
+MOZ_SRC_FILES += [
+    "actors/NullpathBlockedChild.sys.mjs",
+    "actors/NullpathBlockedParent.sys.mjs",
+    "network/NullpathAboutBlocked.sys.mjs",
+    "network/NullpathChannelFilter.sys.mjs",
+    "network/NullpathNetworkErrorObserver.sys.mjs",
+    "network/NullpathProfileMode.sys.mjs",
+    "network/NullpathRequestBlocker.sys.mjs",
+    "NullpathGlue.sys.mjs",
+    "router/NullpathLoopback.sys.mjs",
+    "router/NullpathManagedRouter.sys.mjs",
+    "router/NullpathProcess.sys.mjs",
+    "router/NullpathRouter.sys.mjs",
+    "router/NullpathRouterConfig.sys.mjs",
+    "router/NullpathRouterDetect.sys.mjs",
+    "router/NullpathRouterManifest.sys.mjs",
+    "router/NullpathRouterPanel.sys.mjs",
+    "router/NullpathRouterWidget.sys.mjs",
+    "tabtree/NullpathTabTree.sys.mjs",
+]
+
+XPCSHELL_TESTS_MANIFESTS += ["tests/xpcshell/xpcshell.toml"]
+BROWSER_CHROME_MANIFESTS += ["tests/browser/browser.toml"]

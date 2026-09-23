@@ -3,3 +3,4 @@
 # Skip the whole layer with NULLPATH_BASELINE=1.
 
 patches/windows-uninstall-reset-key.patch
+patches/nullpath-components.patch

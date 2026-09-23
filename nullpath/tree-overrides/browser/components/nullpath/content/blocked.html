@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src chrome:; object-src 'none'"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="localization" href="branding/brand.ftl" />
+    <link rel="localization" href="browser/nullpath/router.ftl" />
+    <link rel="stylesheet" href="chrome://global/skin/in-content/info-pages.css" />
+    <link rel="stylesheet" href="chrome://browser/content/nullpath/blocked.css" />
+    <title data-l10n-id="nullpath-blocked-page-title"></title>
+    <script type="module" src="chrome://browser/content/nullpath/blocked.mjs"></script>
+  </head>
+  <body>
+    <main class="container">
+      <div class="title">
+        <h1 class="title-text" id="blocked-title"></h1>
+      </div>
+      <p id="blocked-description"></p>
+      <p id="blocked-reason" hidden=""></p>
+      <p class="blocked-url" id="blocked-url-line" hidden="">
+        <span data-l10n-id="nullpath-blocked-address"></span>
+        <code id="blocked-url"></code>
+      </p>
+      <p id="blocked-status" role="status" aria-live="polite"></p>
+      <div class="button-container" id="blocked-buttons"></div>
+    </main>
+  </body>
+</html>

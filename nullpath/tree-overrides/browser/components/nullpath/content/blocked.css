@@ -1,0 +1,23 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.title {
+  background-image: url("chrome://browser/content/nullpath/router-attention.svg");
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
+.blocked-url code {
+  overflow-wrap: anywhere;
+}
+
+#blocked-status:empty {
+  display: none;
+}
+
+.button-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

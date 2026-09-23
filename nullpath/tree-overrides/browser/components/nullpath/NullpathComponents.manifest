@@ -1,0 +1,4 @@
+# Nullpath router control startup (docs/nullpath/I2P-ROUTER-TOGGLE.md §6.1).
+category browser-before-ui-startup moz-src:///browser/components/nullpath/NullpathGlue.sys.mjs NullpathGlue.beforeUIStartup
+category browser-first-window-ready moz-src:///browser/components/nullpath/NullpathGlue.sys.mjs NullpathGlue.firstWindowReady
+category browser-window-delayed-startup moz-src:///browser/components/nullpath/NullpathGlue.sys.mjs NullpathGlue.onWindowReady

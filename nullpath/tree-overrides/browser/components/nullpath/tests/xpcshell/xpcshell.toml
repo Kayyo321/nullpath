@@ -1,0 +1,16 @@
+[DEFAULT]
+run-if = ["os == 'win'"]
+head = "head.js"
+firefox-appdir = "browser"
+
+["test_blocker_decisions.js"]
+
+["test_channel_filter.js"]
+
+["test_config.js"]
+
+["test_detect.js"]
+
+["test_managed_conf.js"]
+
+["test_state_machine.js"]

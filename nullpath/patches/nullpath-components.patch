@@ -1,0 +1,20 @@
+# Nullpath: nullpath-components.patch
+#
+# Builds browser/components/nullpath (the I2P router control, fail-closed
+# routing and tree tabs; docs/nullpath/I2P-ROUTER-TOGGLE.md). Everything else
+# lives in new files under nullpath/tree-overrides/: startup goes through
+# NullpathComponents.manifest categories, and the panel views are added at
+# runtime, so no other upstream file needs to change.
+# License: MPL 2.0
+
+diff --git a/browser/components/moz.build b/browser/components/moz.build
+--- a/browser/components/moz.build
++++ b/browser/components/moz.build
+@@ -48,6 +48,7 @@
+     "mozcachedohttp",
+     "multilineeditor",
+     "newtab",
++    "nullpath",
+     "originattributes",
+     "pagedata",
+     "passwordmgr",
