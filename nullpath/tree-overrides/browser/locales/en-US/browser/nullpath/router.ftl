@@ -317,8 +317,12 @@ nullpath-banner-not-connected = Not connected to I2P. Use the router button at t
 # Variables:
 #   $level (Number) - depth in the tab tree, starting at 1
 nullpath-tab-level = level { $level }
-nullpath-sidebar-expand = Expand sidebar
-nullpath-sidebar-collapse = Collapse sidebar
+nullpath-sidebar-expand =
+    .label = Expand sidebar
+    .tooltiptext = Expand sidebar
+nullpath-sidebar-collapse =
+    .label = Collapse sidebar
+    .tooltiptext = Collapse sidebar
 nullpath-sidebar-no-tabs = No open tabs
 nullpath-sidebar-profiles = Profiles
 

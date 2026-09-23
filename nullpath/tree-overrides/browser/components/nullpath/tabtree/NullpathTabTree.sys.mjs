@@ -241,6 +241,9 @@ class WindowTree {
 }
 
 const PROFILE_MODES = ["i2p-sites", "i2p-publicweb", "direct"];
+// Keep in sync with the nullpath-tab-enter / nullpath-tab-leave keyframes.
+const TAB_ENTER_MS = 180;
+const TAB_LEAVE_MS = 160;
 const PROFILE_L10N = {
   "i2p-sites": "nullpath-mode-i2p-sites",
   "i2p-publicweb": "nullpath-mode-i2p-publicweb",
@@ -261,7 +264,27 @@ class ProfileSidebar {
   #root;
   #blockState = new Map();
   #collapsedTabs = new Set();
-  #listener = profiles => { this.#profiles = profiles; this.render(); };
+  #toggle;
+  // Resolved Fluent strings. Rebuilt nodes get their text synchronously so
+  // they do not render blank until async DOM localization catches up.
+  #strings = new Map();
+  // The bridge polls every second; only rebuild when the directory changed.
+  #profilesKey = "";
+  // Row animations. render() rebuilds every row, so each animation is keyed by
+  // "mode:tabId" and resumed with a negative animation-delay on rebuilds.
+  #knownTabs = null;
+  #entering = new Map();
+  #leaving = new Map();
+  // Tabs whose close button was clicked, hidden before the owner confirms.
+  #closing = new Set();
+  #listener = profiles => {
+    let key = JSON.stringify(profiles);
+    if (key == this.#profilesKey) return;
+    this.#profilesKey = key;
+    this.#profiles = profiles;
+    this.#trackTabs(profiles);
+    this.render();
+  };
 
   constructor(win) {
     this.#win = win;
@@ -278,9 +301,97 @@ class ProfileSidebar {
       this.#blockState.set(mode, Services.prefs.getBoolPref(`nullpath.sidebar.collapsed.${mode}`, false));
     }
     host.append(this.#root);
+    this.#mountToggle();
     lazy.NullpathTabBridge.addListener(this.#listener);
     win.addEventListener("unload", () => lazy.NullpathTabBridge.removeListener(this.#listener), { once: true });
     this.render();
+    let ids = [...Object.values(PROFILE_L10N), "nullpath-sidebar-no-tabs", "nullpath-sidebar-profiles"];
+    this.#doc.l10n.formatValues(ids).then(values => {
+      ids.forEach((id, i) => this.#strings.set(id, values[i]));
+      this.render();
+    }, () => {});
+  }
+
+  get #animate() {
+    return !this.#win.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  #trackTabs(profiles) {
+    let now = Date.now();
+    let current = new Set(profiles.flatMap(p => p.windows.flatMap(w => w.tabs.map(t => `${p.mode}:${t.id}`))));
+    if (this.#knownTabs && this.#animate) {
+      for (let key of current) {
+        if (!this.#knownTabs.has(key)) this.#entering.set(key, now);
+      }
+      for (let key of this.#knownTabs) {
+        if (!current.has(key) && !this.#leaving.has(key)) this.#startLeaving(key);
+      }
+    }
+    for (let key of this.#closing) {
+      if (!current.has(key)) this.#closing.delete(key);
+    }
+    for (let [key, entry] of this.#leaving) {
+      if (current.has(key)) this.#finishLeaving(key, entry);
+    }
+    this.#knownTabs = current;
+  }
+
+  /** Keeps a removed tab's row in place as a ghost that collapses away. */
+  #startLeaving(key) {
+    let [mode, id] = key.split(":");
+    let row = this.#doc.getElementById(`nullpath-profile-tab-${mode}-${id}`);
+    if (!row?.isConnected || !this.#animate) return;
+    let prev = row.previousElementSibling;
+    while (prev?.hasAttribute("data-leaving")) prev = prev.previousElementSibling;
+    row.removeAttribute("data-entering");
+    row.setAttribute("data-leaving", "true");
+    row.setAttribute("aria-hidden", "true");
+    row.removeAttribute("tabindex");
+    let entry = { mode, node: row, prevId: prev?.classList.contains("nullpath-profile-tab") ? prev.id : "", start: Date.now() };
+    entry.timer = this.#win.setTimeout(() => this.#finishLeaving(key, entry), TAB_LEAVE_MS + 50);
+    this.#leaving.set(key, entry);
+  }
+
+  #finishLeaving(key, entry) {
+    this.#win.clearTimeout(entry.timer);
+    entry.node.remove();
+    if (this.#leaving.get(key) == entry) this.#leaving.delete(key);
+  }
+
+  #closeTab(mode, tab) {
+    let key = `${mode}:${tab.id}`;
+    this.#startLeaving(key);
+    this.#closing.add(key);
+    this.render();
+    lazy.NullpathTabBridge.command(mode, "close", tab.windowId, tab.id).then(ok => {
+      if (!ok && this.#closing.delete(key)) this.render();
+    });
+  }
+
+  get #expanded() {
+    return this.#root.getAttribute("data-expanded") == "true";
+  }
+
+  #setExpanded(expanded) {
+    this.#root.setAttribute("data-expanded", String(expanded));
+    Services.prefs.setBoolPref("nullpath.sidebar.expanded", expanded);
+    this.render();
+  }
+
+  /** Replaces the native sidebar button left of Back (hidden in tabtree.css). */
+  #mountToggle() {
+    let target = this.#doc.getElementById("nav-bar-customization-target");
+    if (!target || this.#doc.getElementById("nullpath-sidebar-toggle")) return;
+    this.#toggle = this.#doc.createXULElement("toolbarbutton");
+    this.#toggle.id = "nullpath-sidebar-toggle";
+    this.#toggle.className = "toolbarbutton-1 chromeclass-toolbar-additional";
+    this.#toggle.addEventListener("command", () => this.#setExpanded(!this.#expanded));
+    target.before(this.#toggle);
+  }
+
+  #localize(element, id) {
+    this.#doc.l10n.setAttributes(element, id);
+    if (this.#strings.has(id)) element.textContent = this.#strings.get(id);
   }
 
   #button(label, className, activate, title = "") {
@@ -314,7 +425,7 @@ class ProfileSidebar {
     block.setAttribute("data-current", current);
     block.setAttribute("data-collapsed", collapsed);
     let name = this.#doc.createXULElement("label");
-    this.#doc.l10n.setAttributes(name, PROFILE_L10N[mode]);
+    this.#localize(name, PROFILE_L10N[mode]);
     let count = data.count > 99 ? "99+" : String(data.count);
     let header = this.#doc.createXULElement("toolbarbutton");
     header.id = `nullpath-profile-header-${mode}`;
@@ -335,9 +446,8 @@ class ProfileSidebar {
     chevron.setAttribute("aria-hidden", "true");
     header.append(iconBox, name, badge, chevron);
     header.addEventListener("command", () => {
-      if (!this.#root.getAttribute("data-expanded").includes("true")) {
-        this.#root.setAttribute("data-expanded", "true");
-        Services.prefs.setBoolPref("nullpath.sidebar.expanded", true);
+      if (!this.#expanded) {
+        this.#setExpanded(true);
         if (!current && data.count) this.#focusMode(mode, tabs.find(t => t.selected) ?? tabs[0]);
       } else {
         let next = !this.#blockState.get(mode);
@@ -355,19 +465,44 @@ class ProfileSidebar {
         event.preventDefault();
       }
     });
-    block.append(header);
-    if (!collapsed && this.#root.getAttribute("data-expanded") == "true") {
-      if (!tabs.length) {
+    // "+" sits beside the header button rather than inside it: a button nested
+    // in a toolbarbutton would also fire the header's toggle.
+    let headerRow = this.#doc.createXULElement("hbox");
+    headerRow.className = "nullpath-profile-header-row";
+    let add = this.#button("", "nullpath-profile-add", () => lazy.NullpathTabBridge.command(mode, "new", "", "", this.#win));
+    add.id = `nullpath-profile-add-${mode}`;
+    this.#doc.l10n.formatValue(PROFILE_L10N[mode]).then(profileName => {
+      add.setAttribute("tooltiptext", `New tab in ${profileName}`);
+      add.setAttribute("aria-label", `New tab in ${profileName}`);
+    });
+    headerRow.append(header, add);
+    block.append(headerRow);
+    if (!collapsed || !this.#expanded) {
+      if (this.#expanded && !tabs.some(tab => !this.#closing.has(`${mode}:${tab.id}`))) {
         let empty = this.#doc.createXULElement("label");
-        this.#doc.l10n.setAttributes(empty, "nullpath-sidebar-no-tabs");
+        this.#localize(empty, "nullpath-sidebar-no-tabs");
         empty.className = "nullpath-profile-empty";
         block.append(empty);
       }
+      let now = Date.now();
       for (let tab of tabs) {
-        if (!this.#hiddenByCollapsedAncestor(tab, tabs)) block.append(this.#renderTab(mode, tab, tabs));
+        if (this.#closing.has(`${mode}:${tab.id}`) || (this.#expanded && this.#hiddenByCollapsedAncestor(tab, tabs))) continue;
+        let row = this.#renderTab(mode, tab, tabs);
+        let started = this.#entering.get(`${mode}:${tab.id}`);
+        if (started !== undefined && now - started < TAB_ENTER_MS) {
+          row.setAttribute("data-entering", "true");
+          row.style.animationDelay = `-${now - started}ms`;
+        } else {
+          this.#entering.delete(`${mode}:${tab.id}`);
+        }
+        block.append(row);
       }
-      let add = this.#button("+ New tab", "nullpath-profile-newtab", () => lazy.NullpathTabBridge.command(mode, "new", "", "", this.#win));
-      block.append(add);
+      for (let entry of this.#leaving.values()) {
+        if (entry.mode != mode) continue;
+        entry.node.style.animationDelay = `-${now - entry.start}ms`;
+        let anchor = [...block.children].find(child => entry.prevId && child.id == entry.prevId) ?? headerRow;
+        anchor.after(entry.node);
+      }
     }
     return block;
   }
@@ -383,16 +518,21 @@ class ProfileSidebar {
     row.setAttribute("data-selected", tab.selected);
     row.setAttribute("data-depth", String(Math.min(6, this.#depth(tab, siblings))));
     if (tab.parent && siblings.some(t => t.id == tab.parent)) row.setAttribute("data-parent", tab.parent);
-    let favicon = this.#doc.createElementNS("http://www.w3.org/1999/xhtml", "img");
+    // Home/new-tab pages show the Nullpath mark (themed in CSS); other pages
+    // show their own favicon, or the generic page icon while none is known.
+    let favicon = this.#doc.createElementNS("http://www.w3.org/1999/xhtml", tab.home ? "span" : "img");
     favicon.className = "nullpath-profile-favicon";
-    if (tab.favicon) favicon.src = tab.favicon;
-    favicon.alt = "";
+    if (tab.home) favicon.classList.add("nullpath-profile-favicon-home");
+    else {
+      favicon.src = tab.favicon || "chrome://global/skin/icons/defaultFavicon.svg";
+      favicon.alt = "";
+    }
     let title = this.#doc.createXULElement("label");
     title.className = "nullpath-profile-tab-title";
     title.setAttribute("value", tab.title);
     let close = this.#button("", "nullpath-profile-tab-close", event => {
       event.stopPropagation();
-      lazy.NullpathTabBridge.command(mode, "close", tab.windowId, tab.id);
+      this.#closeTab(mode, tab);
     }, "Close tab");
     close.id = `nullpath-profile-close-${mode}-${tab.id}`;
     close.addEventListener("command", event => event.stopPropagation());
@@ -443,21 +583,19 @@ class ProfileSidebar {
   render() {
     if (!this.#root || this.#win.closed) return;
     let focusedId = this.#doc.activeElement?.id;
-    this.#root.setAttribute("data-expanded", this.#root.getAttribute("data-expanded") == "true" ? "true" : "false");
-    let expand = this.#button(this.#root.getAttribute("data-expanded") == "true" ? "Collapse sidebar" : "Expand sidebar", "nullpath-sidebar-toggle", () => {
-      let next = this.#root.getAttribute("data-expanded") != "true";
-      this.#root.setAttribute("data-expanded", String(next));
-      Services.prefs.setBoolPref("nullpath.sidebar.expanded", next);
-      this.render();
-    });
-    expand.id = "nullpath-sidebar-toggle";
-    this.#doc.l10n.setAttributes(expand, this.#root.getAttribute("data-expanded") == "true" ? "nullpath-sidebar-collapse" : "nullpath-sidebar-expand");
+    let expanded = this.#expanded;
+    this.#root.setAttribute("data-expanded", String(expanded));
+    if (this.#toggle) {
+      this.#toggle.setAttribute("aria-expanded", String(expanded));
+      let id = expanded ? "nullpath-sidebar-collapse" : "nullpath-sidebar-expand";
+      if (this.#doc.l10n.getAttributes(this.#toggle).id != id) this.#doc.l10n.setAttributes(this.#toggle, id);
+    }
     let heading = this.#doc.createXULElement("label");
     heading.className = "nullpath-sidebar-heading";
-    this.#doc.l10n.setAttributes(heading, "nullpath-sidebar-profiles");
+    this.#localize(heading, "nullpath-sidebar-profiles");
     let top = this.#doc.createXULElement("hbox");
     top.className = "nullpath-sidebar-top";
-    top.append(heading, expand);
+    top.append(heading);
     let list = this.#doc.createXULElement("vbox");
     list.className = "nullpath-profile-list";
     for (let mode of PROFILE_MODES) list.append(this.#renderBlock(mode));
@@ -467,17 +605,20 @@ class ProfileSidebar {
     spacer.setAttribute("flex", "1");
     let footer = this.#doc.createXULElement("hbox");
     footer.className = "nullpath-sidebar-footer";
-    for (let [label, id] of [["History", "history-panelmenu"], ["Settings", "preferences-button"]]) {
+    // Call the actions directly: the matching toolbar widgets usually sit in
+    // the customization palette, outside the document.
+    let footerActions = [
+      ["History", "history-panelmenu", () => this.#win.PlacesCommandHook.showPlacesOrganizer("History")],
+      ["Settings", "preferences-button", () => this.#win.openPreferences()],
+    ];
+    for (let [label, id, activate] of footerActions) {
       let button = this.#doc.createXULElement("toolbarbutton");
       button.className = "nullpath-sidebar-bottom-control";
-      button.setAttribute("label", this.#root.getAttribute("data-expanded") == "true" ? label : "");
+      button.setAttribute("label", expanded ? label : "");
       button.setAttribute("aria-label", label);
       button.setAttribute("tooltiptext", label);
       button.setAttribute("data-action-id", id);
-      button.addEventListener("command", () => {
-        let target = this.#doc.getElementById(id);
-        target?.doCommand?.();
-      });
+      button.addEventListener("command", activate);
       footer.append(button);
     }
     this.#root.replaceChildren(top, list, compactNew, spacer, footer);

@@ -43,9 +43,20 @@
   min-width: 46px;
   max-width: 46px;
   flex: none;
-  border-inline-end: 1px solid var(--nullpath-border, #dcdcdc);
+  overflow: clip;
   background: var(--nullpath-canvas, #f7f7f7);
 }
+/* Grow the sidebar instead of jumping to full width: an instant 226px resize
+   leaves the page's last paint shifted right for a frame before content
+   relays out, so centred page content visibly lurches. */
+@media (prefers-reduced-motion: no-preference) {
+  #sidebar-container:has(#nullpath-profiles-sidebar) {
+    transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1), min-width 180ms cubic-bezier(0.2, 0.8, 0.2, 1), max-width 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+/* Lay the expanded sidebar out at full width from the first frame so rows
+   are revealed by the growing clip rather than reflowing as it widens. */
+#nullpath-profiles-sidebar[data-expanded="true"] { min-width: 272px; }
 /* sidebar-main is an HTML custom element in a XUL document. Match it without
    a namespace-dependent type selector so the native strip cannot sit beside us. */
 #sidebar-container:has(#nullpath-profiles-sidebar) > :not(#nullpath-profiles-sidebar) { display: none !important; }
@@ -54,20 +65,50 @@
   min-width: 272px;
   max-width: 272px;
 }
+/* The sidebar has fixed widths, so Firefox's resize splitters would only
+   advertise a drag that does nothing. */
+:root:has(#nullpath-profiles-sidebar) :is(#sidebar-launcher-splitter, #sidebar-splitter) { display: none !important; }
+/* The content area draws the dividing lines (top and sidebar side) with a
+   rounded corner under Back, as Firefox does beside its own sidebar. Firefox's
+   dark separator is near-black and vanishes on our dark chrome, so use ours. */
+:root:has(#nullpath-profiles-sidebar) {
+  --chrome-content-separator-color: var(--nullpath-border, #dcdcdc);
+}
+:root:has(#nullpath-profiles-sidebar) #tabbrowser-tabbox {
+  background: var(--nullpath-canvas, #f7f7f7);
+}
+/* Without Nova the edge is .browserContainer's outline, which follows the
+   radius; Nova draws borders instead and needs the inline-start one added. */
+:root:has(#nullpath-profiles-sidebar):not([inDOMFullscreen], [inFullscreen]) #tabbrowser-tabpanels > :not(.split-view-panel) .browserContainer {
+  border-start-start-radius: var(--border-radius-medium, 8px) !important;
+
+  @media -moz-pref("browser.nova.enabled") {
+    border-inline-start: var(--border-width, 1px) solid var(--chrome-content-separator-color) !important;
+  }
+}
 #nullpath-profiles-sidebar { display: flex; width: 100%; min-width: 0; height: 100%; flex: 1; flex-direction: column; box-sizing: border-box; padding: 4px; gap: 8px; color: var(--nullpath-text, #181818); }
-.nullpath-sidebar-toggle,.nullpath-profile-header,.nullpath-sidebar-newtab,.nullpath-profile-newtab,.nullpath-sidebar-bottom-control,.nullpath-profile-tab-close,.nullpath-profile-twisty {
+.nullpath-profile-header,.nullpath-sidebar-newtab,.nullpath-profile-add,.nullpath-sidebar-bottom-control,.nullpath-profile-tab-close,.nullpath-profile-twisty {
   appearance: none; box-sizing: border-box; min-width: 36px; min-height: 36px; border: 0; border-radius: 8px;
   background: transparent; color: inherit; font: 13px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 .nullpath-sidebar-top { display: flex; min-height: 36px; align-items: center; justify-content: space-between; }
 .nullpath-sidebar-heading { display: none; font-weight: 700; }
-.nullpath-sidebar-toggle { align-self: flex-start; width: 36px; padding: 0; overflow: hidden; font-size: 0; background: center/16px no-repeat url("chrome://global/skin/icons/arrow-right-12.svg"); }
-#nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-heading { display: inline; }
-#nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-toggle { background-image: url("chrome://global/skin/icons/arrow-left-12.svg"); }
-.nullpath-profile-list { display: flex; min-height: 0; flex: 0 1 auto; flex-direction: column; align-items: stretch; gap: 8px; overflow-y: auto; }
-.nullpath-profile-block { display: flex; flex: none; flex-direction: column; min-width: 0; width: 100%; gap: 2px; }
-.nullpath-profile-header { position: relative; display: flex; width: 100%; min-height: 40px; align-items: center; gap: 8px; padding: 4px; border-inline-start: 3px solid transparent; background: var(--nullpath-raised, #f0f0f0); text-align: start; }
-.nullpath-profile-block[data-current="true"] > .nullpath-profile-header { border-inline-start-color: var(--nullpath-accent, #181818); background: var(--nullpath-accent-surface, #e8e8e8); }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-top { display: none; }
+#nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-heading { display: inline; padding-inline-start: 4px; }
+/* The expand/collapse arrow sits in the nav bar where the native sidebar
+   button was; that button would toggle Firefox's own sidebar, which we hide. */
+:root:has(#nullpath-profiles-sidebar) #sidebar-button { display: none !important; }
+#nullpath-sidebar-toggle { list-style-image: url("chrome://global/skin/icons/arrow-right.svg"); }
+#nullpath-sidebar-toggle[aria-expanded="true"],
+#nullpath-sidebar-toggle:-moz-locale-dir(rtl):not([aria-expanded="true"]) { list-style-image: url("chrome://global/skin/icons/arrow-left.svg"); }
+#nullpath-sidebar-toggle:-moz-locale-dir(rtl)[aria-expanded="true"] { list-style-image: url("chrome://global/skin/icons/arrow-right.svg"); }
+.nullpath-profile-list { display: flex; min-height: 0; flex: 0 1 auto; flex-direction: column; align-items: stretch; gap: 8px; overflow-x: hidden; overflow-y: auto; }
+.nullpath-profile-block { display: flex; flex: none; flex-direction: column; min-width: 0; width: 100%; gap: 6px; }
+.nullpath-profile-header-row { display: flex; width: 100%; align-items: center; box-sizing: border-box; border-radius: 8px; border-inline-start: 3px solid transparent; background: var(--nullpath-raised, #f0f0f0); }
+.nullpath-profile-block[data-current="true"] > .nullpath-profile-header-row { border-inline-start-color: var(--nullpath-accent, #181818); background: var(--nullpath-accent-surface, #e8e8e8); }
+.nullpath-profile-header { position: relative; display: flex; flex: 1; min-width: 0; min-height: 40px; align-items: center; gap: 8px; padding: 4px; text-align: start; }
+.nullpath-profile-add { flex: none; width: 28px; min-width: 28px; height: 28px; min-height: 28px; margin: 0 4px 0 0; padding: 0; background: center/16px no-repeat url("chrome://browser/skin/nullpath/plus.svg"); -moz-context-properties: fill; fill: currentColor; }
+.nullpath-profile-add > .toolbarbutton-icon,.nullpath-profile-add > .toolbarbutton-text { display: none; }
 .nullpath-profile-icon { display: grid; width: 28px; height: 28px; flex: none; place-items: center; }
 .nullpath-profile-icon img { width: 20px; height: 20px; -moz-context-properties: fill, fill-opacity; fill: currentColor; }
 .nullpath-profile-header > label:not(.nullpath-profile-count) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
@@ -75,36 +116,62 @@
 .nullpath-profile-chevron { width: 16px; height: 16px; flex: none; background: center/12px no-repeat url("chrome://global/skin/icons/arrow-down-12.svg"); }
 .nullpath-profile-block[data-collapsed="true"] .nullpath-profile-chevron { transform: rotate(-90deg); }
 .nullpath-profile-empty { padding: 8px 8px 8px 36px; color: var(--nullpath-secondary, #5c5c5c); font-size: 12px; }
-.nullpath-profile-tab { box-sizing: border-box; min-height: 36px; align-items: center; gap: 6px; padding-inline-start: calc(6px + (var(--profile-depth, 0) * 14px)); border-radius: 8px; }
+.nullpath-profile-tab { box-sizing: border-box; height: 36px; min-height: 36px; align-items: center; gap: 6px; margin-inline: 8px; padding-inline-start: calc(6px + (var(--profile-depth, 0) * 14px)); border-radius: 8px; }
 .nullpath-profile-tab[data-depth="1"] { --profile-depth: 1; }
 .nullpath-profile-tab[data-depth="2"] { --profile-depth: 2; }
 .nullpath-profile-tab[data-depth="3"] { --profile-depth: 3; }
 .nullpath-profile-tab[data-depth="4"] { --profile-depth: 4; }
 .nullpath-profile-tab[data-depth="5"] { --profile-depth: 5; }
 .nullpath-profile-tab[data-depth="6"] { --profile-depth: 6; }
-.nullpath-profile-tab[data-selected="true"] { background: var(--nullpath-accent-surface, #e8e8e8); }
+.nullpath-profile-tab[data-selected="true"] { background: var(--nullpath-surface, #fff); }
 .nullpath-profile-tab:hover { background: var(--nullpath-hover, #e8e8e8); }
+/* Rows grow in when a tab opens and collapse out when it closes. The negative
+   margin cancels the block's 6px gap so neighbours slide without a jump.
+   Durations match TAB_ENTER_MS / TAB_LEAVE_MS in NullpathTabTree.sys.mjs. */
+@keyframes nullpath-tab-enter {
+  from { height: 0; min-height: 0; margin-block-end: -6px; opacity: 0; transform: translateX(-10px); }
+}
+@keyframes nullpath-tab-leave {
+  to { height: 0; min-height: 0; margin-block-end: -6px; opacity: 0; transform: translateX(-10px); }
+}
+.nullpath-profile-tab[data-entering] { overflow: hidden; animation: nullpath-tab-enter 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.nullpath-profile-tab[data-leaving] { overflow: hidden; pointer-events: none; animation: nullpath-tab-leave 160ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+.nullpath-profile-tab[data-leaving] .nullpath-profile-tab-close { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .nullpath-profile-tab[data-entering],.nullpath-profile-tab[data-leaving] { animation: none; }
+}
 .nullpath-profile-favicon { width: 16px; height: 16px; flex: none; }
+.nullpath-profile-favicon-home { background: center/contain no-repeat url("chrome://browser/skin/nullpath/logo-mark-light.svg"); }
+:root[nullpath-theme="dark"] .nullpath-profile-favicon-home { background-image: url("chrome://browser/skin/nullpath/logo-mark-dark.svg"); }
+@media (prefers-color-scheme: dark) {
+  :root:not([nullpath-theme="light"]) .nullpath-profile-favicon-home { background-image: url("chrome://browser/skin/nullpath/logo-mark-dark.svg"); }
+}
 .nullpath-profile-tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nullpath-profile-tab-close { display: none; width: 28px; min-width: 28px; min-height: 28px; background: center/16px no-repeat url("chrome://global/skin/icons/close-12.svg"); -moz-context-properties: fill; fill: currentColor; }
-.nullpath-profile-tab:hover .nullpath-profile-tab-close,.nullpath-profile-tab:focus-within .nullpath-profile-tab-close { display: block; }
+/* The close button always occupies its slot and only toggles visibility, so
+   hovering a row never reflows the list. */
+.nullpath-profile-tab-close { visibility: hidden; flex: none; width: 28px; min-width: 28px; height: 28px; min-height: 28px; margin: 0; padding: 0; background: center/16px no-repeat url("chrome://global/skin/icons/close.svg"); -moz-context-properties: fill; fill: currentColor; }
+.nullpath-profile-tab-close > .toolbarbutton-icon,.nullpath-profile-tab-close > .toolbarbutton-text { display: none; }
+.nullpath-profile-tab:hover .nullpath-profile-tab-close,.nullpath-profile-tab:focus-within .nullpath-profile-tab-close { visibility: visible; }
 .nullpath-profile-twisty { width: 16px; min-width: 16px; min-height: 16px; height: 16px; padding: 0; background: center/12px no-repeat url("chrome://global/skin/icons/arrow-down-12.svg"); }
 .nullpath-profile-twisty[aria-expanded="false"] { background-image: url("chrome://global/skin/icons/arrow-right-12.svg"); }
-.nullpath-profile-newtab { width: 100%; padding-inline-start: 36px; text-align: start; color: var(--nullpath-accent, #181818); }
 .nullpath-sidebar-newtab { width: 36px; flex: none; padding: 0; background: center/20px no-repeat url("chrome://browser/skin/nullpath/plus.svg"); -moz-context-properties: fill; fill: currentColor; }
 .nullpath-sidebar-footer { display: flex; flex-direction: column; gap: 4px; }
 .nullpath-sidebar-bottom-control { width: 100%; padding-inline-start: 36px; overflow: hidden; white-space: nowrap; text-align: start; }
-[data-action-id="history-panelmenu"] { background: 8px center/20px no-repeat url("chrome://browser/skin/icons/history.svg"); }
+.nullpath-sidebar-bottom-control { -moz-context-properties: fill; fill: currentColor; }
+[data-action-id="history-panelmenu"] { background: 8px center/20px no-repeat url("chrome://browser/skin/history.svg"); }
 [data-action-id="preferences-button"] { background: 8px center/20px no-repeat url("chrome://global/skin/icons/settings.svg"); }
-.nullpath-sidebar-bottom-control:hover,.nullpath-profile-header:hover,.nullpath-sidebar-toggle:hover,.nullpath-profile-newtab:hover,.nullpath-sidebar-newtab:hover { background-color: var(--nullpath-hover, #e8e8e8); }
-#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-header { width: 38px; min-height: 48px; padding: 4px 0; border-radius: 8px; }
+.nullpath-sidebar-bottom-control:hover,.nullpath-profile-header:hover,.nullpath-profile-add:hover,.nullpath-sidebar-newtab:hover { background-color: var(--nullpath-hover, #e8e8e8); }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-header { width: 100%; min-height: 48px; padding: 4px 0; border-radius: 8px; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-header > label { display: none; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-chevron { display: none; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-count { display: block; position: absolute; inset-block-end: 2px; inset-inline-end: 2px; padding: 0 2px; border-radius: 4px; background: var(--nullpath-surface, #fff); }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-list { gap: 8px; }
-#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-newtab,
-#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-empty,
-#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab { display: none; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-add,
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-empty { display: none; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab { width: 36px; height: 36px; min-height: 36px; margin-inline: 1px; padding: 0; justify-content: center; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab-title,
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab-close,
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-twisty { display: none; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-footer .nullpath-sidebar-bottom-control { display: block; width: 36px; overflow: hidden; padding: 0; font-size: 0; background-position: center; }
 #nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-newtab { display: none; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-newtab { margin-top: 0; }

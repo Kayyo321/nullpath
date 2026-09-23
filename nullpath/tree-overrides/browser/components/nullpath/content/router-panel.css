@@ -409,15 +409,17 @@
 #nullpath-router-button[nullpath-setup-badge]::after { content: ""; position: absolute; inset-block-start: 4px; inset-inline-end: 4px; width: 6px; height: 6px; border: 1px solid var(--nullpath-surface); border-radius: 50%; background: var(--nullpath-accent); }
 :root[nullpath-mode="direct"] #nullpath-mode-chip { background-image: none; }
 
+/* Sized like a native .toolbarbutton-1 (icon + inner padding, outer padding
+   as margin) so the gaps either side match its neighbours. */
 #nullpath-theme-button {
   appearance: none;
   box-sizing: border-box;
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  margin: 0 4px 0 0;
+  width: calc(16px + 2 * var(--toolbarbutton-padding-inner, 8px));
+  min-width: calc(16px + 2 * var(--toolbarbutton-padding-inner, 8px));
+  height: calc(16px + 2 * var(--toolbarbutton-padding-inner, 8px));
+  margin: 0 var(--toolbarbutton-padding-outer, 2px);
   padding: 0;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 8px;
   background: transparent center / 18px 18px no-repeat url("chrome://browser/skin/nullpath/sun.svg");
   -moz-context-properties: fill;
