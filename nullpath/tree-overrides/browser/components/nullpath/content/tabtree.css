@@ -37,8 +37,12 @@
 }
 
 /* Three-profile sidebar. Width is a local UI preference, independent of the
-   browser's network mode. */
-#sidebar-container:has(#nullpath-profiles-sidebar) {
+   browser's network mode.
+   browser.xhtml links this sheet (nullpath-overlay.py) but the sidebar only
+   mounts at delayed startup, after the first paint. Rules that shape the
+   window therefore apply without waiting for #nullpath-profiles-sidebar, so
+   Firefox's own sidebar never flashes up at launch. */
+#sidebar-container {
   width: 46px;
   min-width: 46px;
   max-width: 46px;
@@ -59,27 +63,35 @@
 #nullpath-profiles-sidebar[data-expanded="true"] { min-width: 272px; }
 /* sidebar-main is an HTML custom element in a XUL document. Match it without
    a namespace-dependent type selector so the native strip cannot sit beside us. */
-#sidebar-container:has(#nullpath-profiles-sidebar) > :not(#nullpath-profiles-sidebar) { display: none !important; }
+#sidebar-container > :not(#nullpath-profiles-sidebar) { display: none !important; }
 #sidebar-container:has(#nullpath-profiles-sidebar[data-expanded="true"]) {
   width: 272px;
   min-width: 272px;
   max-width: 272px;
 }
+/* Before the sidebar mounts, take the width it is about to have. */
+@media -moz-pref("nullpath.sidebar.expanded") {
+  #sidebar-container:not(:has(#nullpath-profiles-sidebar)) {
+    width: 272px;
+    min-width: 272px;
+    max-width: 272px;
+  }
+}
 /* The sidebar has fixed widths, so Firefox's resize splitters would only
    advertise a drag that does nothing. */
-:root:has(#nullpath-profiles-sidebar) :is(#sidebar-launcher-splitter, #sidebar-splitter) { display: none !important; }
+:is(#sidebar-launcher-splitter, #sidebar-splitter) { display: none !important; }
 /* The content area draws the dividing lines (top and sidebar side) with a
    rounded corner under Back, as Firefox does beside its own sidebar. Firefox's
    dark separator is near-black and vanishes on our dark chrome, so use ours. */
-:root:has(#nullpath-profiles-sidebar) {
+:root {
   --chrome-content-separator-color: var(--nullpath-border, #dcdcdc);
 }
-:root:has(#nullpath-profiles-sidebar) #tabbrowser-tabbox {
+#tabbrowser-tabbox {
   background: var(--nullpath-canvas, #f7f7f7);
 }
 /* Without Nova the edge is .browserContainer's outline, which follows the
    radius; Nova draws borders instead and needs the inline-start one added. */
-:root:has(#nullpath-profiles-sidebar):not([inDOMFullscreen], [inFullscreen]) #tabbrowser-tabpanels > :not(.split-view-panel) .browserContainer {
+:root:not([inDOMFullscreen], [inFullscreen]) #tabbrowser-tabpanels > :not(.split-view-panel) .browserContainer {
   border-start-start-radius: var(--border-radius-medium, 8px) !important;
 
   @media -moz-pref("browser.nova.enabled") {
@@ -96,8 +108,16 @@
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-top { display: none; }
 #nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-heading { display: inline; padding-inline-start: 4px; }
 /* The expand/collapse arrow sits in the nav bar where the native sidebar
-   button was; that button would toggle Firefox's own sidebar, which we hide. */
-:root:has(#nullpath-profiles-sidebar) #sidebar-button { display: none !important; }
+   button was; that button would toggle Firefox's own sidebar, which we hide.
+   Until the arrow mounts, the native button stands in with the arrow's icon
+   so the nav bar neither shifts nor changes at launch. */
+:root:has(#nullpath-sidebar-toggle) #sidebar-button { display: none !important; }
+:root:not(:has(#nullpath-sidebar-toggle)) #sidebar-button { list-style-image: url("chrome://global/skin/icons/arrow-right.svg"); }
+/* It is [checked] while Firefox's sidebar is open; the arrow never is. */
+:root:not(:has(#nullpath-sidebar-toggle)) #sidebar-button:is([checked], [open]) > :is(.toolbarbutton-icon, .toolbarbutton-badge-stack) { background-color: transparent !important; }
+@media -moz-pref("nullpath.sidebar.expanded") {
+  :root:not(:has(#nullpath-sidebar-toggle)) #sidebar-button { list-style-image: url("chrome://global/skin/icons/arrow-left.svg"); }
+}
 #nullpath-sidebar-toggle { list-style-image: url("chrome://global/skin/icons/arrow-right.svg"); }
 #nullpath-sidebar-toggle[aria-expanded="true"],
 #nullpath-sidebar-toggle:-moz-locale-dir(rtl):not([aria-expanded="true"]) { list-style-image: url("chrome://global/skin/icons/arrow-left.svg"); }
@@ -179,11 +199,21 @@
 .nullpath-profile-twisty[aria-expanded="false"] { background-image: url("chrome://global/skin/icons/arrow-right-12.svg"); }
 .nullpath-sidebar-newtab { width: 36px; flex: none; padding: 0; background: center/20px no-repeat url("chrome://browser/skin/nullpath/plus.svg"); -moz-context-properties: fill; fill: currentColor; }
 .nullpath-sidebar-footer { display: flex; flex-direction: column; gap: 4px; }
-.nullpath-sidebar-bottom-control { width: 100%; padding-inline-start: 36px; overflow: hidden; white-space: nowrap; text-align: start; }
+/* toolbarbutton centers its label; these rows read icon, then label. */
+.nullpath-sidebar-bottom-control { width: 100%; justify-content: flex-start; padding-inline: 36px 8px; overflow: hidden; white-space: nowrap; text-align: start; }
+.nullpath-sidebar-bottom-control > .toolbarbutton-icon { display: none; }
+.nullpath-sidebar-bottom-control > .toolbarbutton-text { flex: 1; margin: 0; padding: 0; text-align: start; }
 .nullpath-sidebar-bottom-control { -moz-context-properties: fill; fill: currentColor; }
 [data-action-id="history-panelmenu"] { background: 8px center/20px no-repeat url("chrome://browser/skin/history.svg"); }
 [data-action-id="preferences-button"] { background: 8px center/20px no-repeat url("chrome://global/skin/icons/settings.svg"); }
 .nullpath-sidebar-bottom-control:hover,.nullpath-profile-header:hover,.nullpath-profile-add:hover,.nullpath-sidebar-newtab:hover { background-color: var(--nullpath-hover, #e8e8e8); }
+/* A faint resting backdrop, so hovering deepens it rather than popping a box
+   in from nothing. */
+#nullpath-profiles-sidebar .nullpath-sidebar-bottom-control { background-color: color-mix(in srgb, var(--nullpath-hover, #e8e8e8) 45%, transparent); transition: background-color 120ms; }
+#nullpath-profiles-sidebar .nullpath-sidebar-bottom-control:hover { background-color: var(--nullpath-hover, #e8e8e8); }
+@media (prefers-reduced-motion: reduce) {
+  #nullpath-profiles-sidebar .nullpath-sidebar-bottom-control { transition: none; }
+}
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-header { width: 100%; min-height: 48px; padding: 4px 0; border-radius: 8px; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-header > label { display: none; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-chevron { display: none; }

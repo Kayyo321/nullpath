@@ -95,6 +95,21 @@ replace("browser/base/content/aboutDialog.js", [
     ("librewolf.aboutMenu.", "nullpath.aboutMenu."),
     ("https://librewolf.dev/api/v1/repos/librewolf/source/releases", ""),
 ])
+# Nullpath's chrome styles must be in place for the first paint. The scripts
+# that also add them only run at delayed startup, so Firefox's own sidebar
+# flashed up at launch. They skip their <link> when these ids exist.
+xhtml = TREE / "browser/base/content/browser.xhtml"
+data = xhtml.read_text(encoding="utf-8")
+links = (
+    '  <link id="nullpath-router-stylesheet" rel="stylesheet" href="chrome://browser/content/nullpath/router-panel.css" />\n'
+    '  <link id="nullpath-tabtree-stylesheet" rel="stylesheet" href="chrome://browser/content/nullpath/tabtree.css" />\n\n'
+)
+anchor = '  <link rel="localization" href="branding/brand.ftl"/>\n'
+if links not in data:
+    if anchor not in data:
+        raise RuntimeError(f"{xhtml}: expected text missing: {anchor!r}")
+    data = data.replace(anchor, links + anchor, 1)
+write(xhtml, data)
 replace("build/moz.build", [("update.librewolf.net", "localhost")])
 replace("dom/canvas/ClientWebGLContext.cpp", [
     ("StaticPrefs::librewolf_webgl_prompt", "StaticPrefs::nullpath_webgl_prompt"),

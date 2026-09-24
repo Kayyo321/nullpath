@@ -1376,10 +1376,14 @@ export const NullpathTabTree = {
       return;
     }
     let doc = win.document;
-    let link = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
-    link.rel = "stylesheet";
-    link.href = STYLESHEET;
-    (doc.head ?? doc.documentElement).append(link);
+    // browser.xhtml links the sheet itself (nullpath-overlay.py).
+    if (!doc.getElementById("nullpath-tabtree-stylesheet")) {
+      let link = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
+      link.id = "nullpath-tabtree-stylesheet";
+      link.rel = "stylesheet";
+      link.href = STYLESHEET;
+      (doc.head ?? doc.documentElement).append(link);
+    }
     win.MozXULElement?.insertFTLIfNeeded("browser/nullpath/router.ftl");
     trees.set(win, new WindowTree(win));
     lazy.NullpathTabBridge.onWindowReady(win);

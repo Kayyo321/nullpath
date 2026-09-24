@@ -241,9 +241,14 @@
   }
 }
 
-/* Nullpath product palette and stable router control. */
+/* Nullpath product palette and stable router control. The accent's hover,
+   active and selected shades are set too: Firefox's defaults are blue, which
+   showed on primary buttons and switched-on toggles under the pointer. */
 :root {
   --color-accent-primary: #181818;
+  --color-accent-primary-hover: #3a3a3a;
+  --color-accent-primary-active: #000000;
+  --color-accent-primary-selected: #3a3a3a;
   --focus-outline-color: #181818;
   --nullpath-canvas: #f7f7f7;
   --nullpath-surface: #ffffff;
@@ -269,6 +274,9 @@
   :root:not([nullpath-theme="light"]) {
     color-scheme: dark;
     --color-accent-primary: #ffffff;
+    --color-accent-primary-hover: #d9d9d9;
+    --color-accent-primary-active: #bdbdbd;
+    --color-accent-primary-selected: #d9d9d9;
     --focus-outline-color: #ffffff;
     --nullpath-canvas: #111111;
     --nullpath-surface: #1c1c1c;
@@ -288,6 +296,9 @@
 }
 :root[nullpath-theme="dark"] {
   --color-accent-primary: #ffffff;
+  --color-accent-primary-hover: #d9d9d9;
+  --color-accent-primary-active: #bdbdbd;
+  --color-accent-primary-selected: #d9d9d9;
   --focus-outline-color: #ffffff;
   color-scheme: dark;
   --nullpath-canvas: #111111;
@@ -307,6 +318,9 @@
 }
 :root[nullpath-theme="light"] {
   --color-accent-primary: #181818;
+  --color-accent-primary-hover: #3a3a3a;
+  --color-accent-primary-active: #000000;
+  --color-accent-primary-selected: #3a3a3a;
   --focus-outline-color: #181818;
   color-scheme: light;
   --nullpath-canvas: #f7f7f7;
@@ -563,6 +577,46 @@
   background: var(--nullpath-accent);
   border-color: var(--nullpath-accent);
   color: var(--nullpath-canvas);
+  transition: background-color 120ms, border-color 120ms;
+
+  &:not(:disabled):hover {
+    background: var(--color-accent-primary-hover);
+    border-color: var(--color-accent-primary-hover);
+    color: var(--nullpath-canvas);
+  }
+
+  &:not(:disabled):hover:active {
+    background: var(--color-accent-primary-active);
+    border-color: var(--color-accent-primary-active);
+  }
+}
+
+/* Switches: a distinct knob inside a track. Firefox's knob nearly fills its
+   track and, when off, is close to the track's color, so a switch read as
+   one flat disc. Off is a ringed track with a gray knob; on is the accent
+   track with a knob in the surface color. */
+moz-toggle {
+  --toggle-height: 20px;
+  --toggle-width: 36px;
+  --toggle-dot-margin: 3px;
+  --toggle-background-color: var(--nullpath-raised);
+  --toggle-background-color-hover: var(--nullpath-hover);
+  --toggle-background-color-active: var(--nullpath-hover);
+  --toggle-border-color: var(--nullpath-secondary);
+  --toggle-border-color-hover: var(--nullpath-text);
+  --toggle-border-color-active: var(--nullpath-text);
+  --toggle-dot-background-color: var(--nullpath-secondary);
+  --toggle-dot-background-color-hover: var(--nullpath-text);
+  --toggle-dot-background-color-active: var(--nullpath-text);
+  --toggle-background-color-pressed: var(--nullpath-accent);
+  --toggle-background-color-pressed-hover: var(--color-accent-primary-hover);
+  --toggle-background-color-pressed-active: var(--color-accent-primary-active);
+  --toggle-dot-background-color-on-pressed: var(--nullpath-surface);
+}
+moz-toggle::part(button) { transition: background-color 140ms, border-color 140ms; }
+moz-toggle::part(button)::before { box-shadow: 0 1px 2px rgb(0 0 0 / 0.35); transition: translate 140ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 140ms; }
+@media (prefers-reduced-motion: reduce) {
+  moz-toggle::part(button),moz-toggle::part(button)::before { transition: none; }
 }
 .nullpath-router-body > .nullpath-router-nav button { min-height: 36px; }
 
