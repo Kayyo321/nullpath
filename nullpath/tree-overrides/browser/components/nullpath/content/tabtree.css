@@ -110,9 +110,11 @@
 /* The expand/collapse arrow sits in the nav bar where the native sidebar
    button was; that button would toggle Firefox's own sidebar, which we hide.
    Until the arrow mounts, the native button stands in with the arrow's icon
-   so the nav bar neither shifts nor changes at launch. */
+   so the nav bar neither shifts nor changes at launch. As the first
+   customizable item it would also get the toolbar's wider start padding,
+   which the arrow, placed before that area, doesn't. */
 :root:has(#nullpath-sidebar-toggle) #sidebar-button { display: none !important; }
-:root:not(:has(#nullpath-sidebar-toggle)) #sidebar-button { list-style-image: url("chrome://global/skin/icons/arrow-right.svg"); }
+:root:not(:has(#nullpath-sidebar-toggle)) #sidebar-button { list-style-image: url("chrome://global/skin/icons/arrow-right.svg"); padding-inline-start: var(--toolbarbutton-padding-outer); }
 /* It is [checked] while Firefox's sidebar is open; the arrow never is. */
 :root:not(:has(#nullpath-sidebar-toggle)) #sidebar-button:is([checked], [open]) > :is(.toolbarbutton-icon, .toolbarbutton-badge-stack) { background-color: transparent !important; }
 @media -moz-pref("nullpath.sidebar.expanded") {
@@ -122,6 +124,32 @@
 #nullpath-sidebar-toggle[aria-expanded="true"],
 #nullpath-sidebar-toggle:-moz-locale-dir(rtl):not([aria-expanded="true"]) { list-style-image: url("chrome://global/skin/icons/arrow-left.svg"); }
 #nullpath-sidebar-toggle:-moz-locale-dir(rtl)[aria-expanded="true"] { list-style-image: url("chrome://global/skin/icons/arrow-right.svg"); }
+/* While the sidebar is expanded the URL bar starts on the content area's edge
+   below it. The springs before it would move it with the window width, so a
+   margin fills what the arrow, Back, Forward and Reload leave of the 272px.
+   Below 700px the sidebar overlays the page and there is no edge to meet.
+   The edge line is .browserContainer's outline, in the pixel left of the
+   content area; Nova's border is the pixel inside it. */
+#nav-bar {
+  --nullpath-content-line: 271px;
+  --nullpath-urlbar-inset: calc(var(--nullpath-content-line) - 4 * (16px + 2 * var(--toolbarbutton-padding-inner) + 2 * var(--toolbarbutton-padding-outer)));
+
+  @media -moz-pref("browser.nova.enabled") {
+    --nullpath-content-line: 272px;
+  }
+}
+@media (width > 699px) {
+  :root:has(#nullpath-profiles-sidebar[data-expanded="true"]) #nav-bar:not([customizing]) {
+    #nav-bar-customization-target > toolbarspring:has(~ #urlbar-container) { display: none; }
+    #urlbar-container { margin-inline-start: var(--nullpath-urlbar-inset); }
+  }
+  @media -moz-pref("nullpath.sidebar.expanded") {
+    :root:not(:has(#nullpath-profiles-sidebar)) #nav-bar:not([customizing]) {
+      #nav-bar-customization-target > toolbarspring:has(~ #urlbar-container) { display: none; }
+      #urlbar-container { margin-inline-start: var(--nullpath-urlbar-inset); }
+    }
+  }
+}
 .nullpath-profile-list { display: flex; min-height: 0; flex: 0 1 auto; flex-direction: column; align-items: stretch; gap: 8px; overflow-x: hidden; overflow-y: auto; }
 .nullpath-profile-block { display: flex; flex: none; flex-direction: column; min-width: 0; width: 100%; gap: 6px; }
 .nullpath-profile-header-row { display: flex; width: 100%; align-items: center; box-sizing: border-box; border-radius: 8px; border-inline-start: 3px solid transparent; background: var(--nullpath-raised, #f0f0f0); }
