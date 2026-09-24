@@ -116,7 +116,7 @@
 .nullpath-profile-chevron { width: 16px; height: 16px; flex: none; background: center/12px no-repeat url("chrome://global/skin/icons/arrow-down-12.svg"); }
 .nullpath-profile-block[data-collapsed="true"] .nullpath-profile-chevron { transform: rotate(-90deg); }
 .nullpath-profile-empty { padding: 8px 8px 8px 36px; color: var(--nullpath-secondary, #5c5c5c); font-size: 12px; }
-.nullpath-profile-tab { box-sizing: border-box; height: 36px; min-height: 36px; align-items: center; gap: 6px; margin-inline: 8px; padding-inline-start: calc(6px + (var(--profile-depth, 0) * 14px)); border-radius: 8px; }
+.nullpath-profile-tab { position: relative; box-sizing: border-box; height: 36px; min-height: 36px; align-items: center; gap: 6px; margin-inline: 8px; padding-inline-start: calc(6px + (var(--profile-depth, 0) * 14px)); border-radius: 8px; }
 .nullpath-profile-tab[data-depth="1"] { --profile-depth: 1; }
 .nullpath-profile-tab[data-depth="2"] { --profile-depth: 2; }
 .nullpath-profile-tab[data-depth="3"] { --profile-depth: 3; }
@@ -124,7 +124,27 @@
 .nullpath-profile-tab[data-depth="5"] { --profile-depth: 5; }
 .nullpath-profile-tab[data-depth="6"] { --profile-depth: 6; }
 .nullpath-profile-tab[data-selected="true"] { background: var(--nullpath-surface, #fff); }
-.nullpath-profile-tab:hover { background: var(--nullpath-hover, #e8e8e8); }
+.nullpath-profile-tab:hover,.nullpath-profile-tab[data-context] { background: var(--nullpath-hover, #e8e8e8); }
+/* Drag reordering: the dragged branch dims and a line marks the gap it would
+   land in, indented to the level it would take (--drop-depth). The line sits
+   in the middle of the block's 6px row gap. */
+.nullpath-profile-tab[data-dragging] { opacity: 0.4; }
+.nullpath-profile-tab[data-drop]::before { content: ""; position: absolute; inset-inline: calc(6px + var(--drop-depth, 0) * 14px) 4px; height: 2px; border-radius: 1px; background: var(--nullpath-accent, #181818); pointer-events: none; }
+.nullpath-profile-tab[data-drop="before"]::before { inset-block-start: -4px; }
+.nullpath-profile-tab[data-drop="after"]::before { inset-block-end: -4px; }
+/* Set color: a stripe on the row's leading edge. */
+.nullpath-profile-tab[data-color]::after { content: ""; position: absolute; inset-block: 8px; inset-inline-start: 0; width: 3px; border-radius: 2px; background: var(--nullpath-tab-color); pointer-events: none; }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="red"] { --nullpath-tab-color: light-dark(#d7264c, #ff848b); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="orange"] { --nullpath-tab-color: light-dark(#c24e00, #ffa266); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="yellow"] { --nullpath-tab-color: light-dark(#a47f00, #ffd567); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="green"] { --nullpath-tab-color: light-dark(#017a40, #4dd996); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="cyan"] { --nullpath-tab-color: light-dark(#007f8c, #53cfdc); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="blue"] { --nullpath-tab-color: light-dark(#0061e0, #73a7f3); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="purple"] { --nullpath-tab-color: light-dark(#8a2fd0, #c69cff); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="pink"] { --nullpath-tab-color: light-dark(#c50061, #ff8ac5); }
+:is(.nullpath-profile-tab, .nullpath-tab-color-option)[data-color="gray"] { --nullpath-tab-color: light-dark(#5e6a77, #99a6b4); }
+/* Unloaded tabs are dimmed until they load again. */
+.nullpath-profile-tab[data-unloaded="true"]:not([data-group]) :is(.nullpath-profile-favicon, .nullpath-profile-tab-title) { opacity: 0.55; }
 /* Rows grow in when a tab opens and collapse out when it closes. The negative
    margin cancels the block's 6px gap so neighbours slide without a jump.
    Durations match TAB_ENTER_MS / TAB_LEAVE_MS in NullpathTabTree.sys.mjs. */
@@ -146,7 +166,10 @@
 @media (prefers-color-scheme: dark) {
   :root:not([nullpath-theme="light"]) .nullpath-profile-favicon-home { background-image: url("chrome://browser/skin/nullpath/logo-mark-dark.svg"); }
 }
+.nullpath-profile-favicon-group { background: center/16px no-repeat url("chrome://global/skin/icons/folder.svg"); -moz-context-properties: fill; fill: currentColor; }
 .nullpath-profile-tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nullpath-profile-tab-title-input { flex: 1; min-width: 0; height: 26px; box-sizing: border-box; margin: 0; padding: 0 6px; border: 1px solid var(--nullpath-accent, #181818); border-radius: 6px; background: var(--nullpath-surface, #fff); color: inherit; font: inherit; }
+.nullpath-profile-tab-muted { width: 12px; height: 12px; flex: none; list-style-image: url("chrome://browser/skin/tabbrowser/tab-audio-muted-small.svg"); -moz-context-properties: fill; fill: currentColor; opacity: 0.7; }
 /* The close button always occupies its slot and only toggles visibility, so
    hovering a row never reflows the list. */
 .nullpath-profile-tab-close { visibility: hidden; flex: none; width: 28px; min-width: 28px; height: 28px; min-height: 28px; margin: 0; padding: 0; background: center/16px no-repeat url("chrome://global/skin/icons/close.svg"); -moz-context-properties: fill; fill: currentColor; }
@@ -170,8 +193,13 @@
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-empty { display: none; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab { width: 36px; height: 36px; min-height: 36px; margin-inline: 1px; padding: 0; justify-content: center; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab-title,
-#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab-close,
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-twisty { display: none; }
+/* Compact tiles: a small close badge in the top corner and a muted badge in
+   the bottom one, both inside the tile so the 46px sidebar doesn't clip them. */
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab-close { position: absolute; inset-block-start: 0; inset-inline-end: 0; width: 16px; min-width: 16px; height: 16px; min-height: 16px; border-radius: 50%; background: var(--nullpath-surface, #fff) center/10px no-repeat url("chrome://global/skin/icons/close.svg"); box-shadow: 0 0 0 1px var(--nullpath-border, #dcdcdc); }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab-close:hover { background-color: var(--nullpath-hover, #e8e8e8); }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab-muted { position: absolute; inset-block-end: 2px; inset-inline-end: 2px; width: 10px; height: 10px; }
+#nullpath-profiles-sidebar[data-expanded="false"] .nullpath-profile-tab[data-drop]::before { inset-inline: 2px; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-footer .nullpath-sidebar-bottom-control { display: block; width: 36px; overflow: hidden; padding: 0; font-size: 0; background-position: center; }
 #nullpath-profiles-sidebar[data-expanded="true"] .nullpath-sidebar-newtab { display: none; }
 #nullpath-profiles-sidebar[data-expanded="false"] .nullpath-sidebar-newtab { margin-top: 0; }
@@ -184,6 +212,58 @@
   #nullpath-profiles-sidebar { forced-color-adjust: auto; }
   .nullpath-profile-header,.nullpath-profile-tab { border: 1px solid ButtonText; }
   #nullpath-profiles-sidebar :focus-visible { outline: 2px solid Highlight; }
+}
+
+/* Tab context menu. The first row is icon buttons, like the page context
+   menu's Back/Forward/Reload/Bookmark row. */
+#nullpath-tab-context-actions > .menuitem-iconic {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+
+  > .menu-text {
+    display: none;
+  }
+
+  > .menu-icon {
+    width: 30px;
+    height: 30px;
+    padding: 7px;
+    margin: 0;
+  }
+}
+#nullpath-tab-context-undo-close { --menuitem-icon: url("chrome://global/skin/icons/undo.svg"); }
+#nullpath-tab-context-mute { --menuitem-icon: url("chrome://browser/skin/tabbrowser/tab-audio-muted-small.svg"); }
+#nullpath-tab-context-mute[muted] { --menuitem-icon: url("chrome://browser/skin/tabbrowser/tab-audio-playing-small.svg"); }
+#nullpath-tab-context-reload { --menuitem-icon: url("chrome://global/skin/icons/reload.svg"); }
+#nullpath-tab-context-bookmark { --menuitem-icon: url("chrome://browser/skin/bookmark-hollow.svg"); }
+#nullpath-tab-context-move { --menuitem-icon: url("chrome://browser/skin/window.svg"); }
+#nullpath-tab-context-reopen { --menuitem-icon: url("chrome://global/skin/icons/open-in-new.svg"); }
+#nullpath-tab-context-color { --menuitem-icon: url("chrome://global/skin/icons/color-picker-20.svg"); }
+#nullpath-tab-context-sort { --menuitem-icon: url("chrome://browser/skin/sort.svg"); }
+#nullpath-tab-context-pin { --menuitem-icon: url("chrome://browser/skin/pin.svg"); }
+#nullpath-tab-context-duplicate { --menuitem-icon: url("chrome://global/skin/icons/edit-copy.svg"); }
+#nullpath-tab-context-unload { --menuitem-icon: url("chrome://global/skin/icons/moon.svg"); }
+#nullpath-tab-context-copy-url { --menuitem-icon: url("chrome://global/skin/icons/link.svg"); }
+#nullpath-tab-context-copy-title { --menuitem-icon: url("chrome://global/skin/icons/clipboard.svg"); }
+#nullpath-tab-context-edit-title { --menuitem-icon: url("chrome://global/skin/icons/edit.svg"); }
+#nullpath-tab-context-group { --menuitem-icon: url("chrome://global/skin/icons/folder.svg"); }
+#nullpath-tab-context-flatten { --menuitem-icon: url("chrome://global/skin/icons/shaft-arrow-left.svg"); }
+#nullpath-tab-context-flatten:-moz-locale-dir(rtl) > .menu-icon { transform: scaleX(-1); }
+#nullpath-tab-context-configure { --menuitem-icon: url("chrome://browser/skin/permissions.svg"); }
+#nullpath-tab-context-close { --menuitem-icon: url("chrome://global/skin/icons/close.svg"); }
+/* Color swatches reuse Firefox's tab group chicklet; "No color" is an outline. */
+.nullpath-tab-color-option {
+  --menuitem-icon: url("chrome://browser/skin/tabbrowser/tab-group-chicklet.svg");
+  --menuitem-icon-fill: var(--nullpath-tab-color, transparent);
+  -moz-context-properties: fill, stroke;
+  stroke: var(--nullpath-tab-color, currentColor);
+
+  &[current] > .menu-text {
+    font-weight: 600;
+  }
 }
 
 /* Horizontal tab strip: no tree. */

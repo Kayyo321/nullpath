@@ -326,6 +326,87 @@ nullpath-sidebar-collapse =
 nullpath-sidebar-no-tabs = No open tabs
 nullpath-sidebar-profiles = Profiles
 
+## Tab context menu in the profile sidebar. The first four are icon buttons,
+## so the tooltip is the only visible text.
+
+nullpath-tab-context-undo-close =
+    .label = Reopen closed tab
+    .tooltiptext = Reopen closed tab
+nullpath-tab-context-mute =
+    .label = Mute tab
+    .tooltiptext = Mute tab
+nullpath-tab-context-unmute =
+    .label = Unmute tab
+    .tooltiptext = Unmute tab
+nullpath-tab-context-reload =
+    .label = Reload tab
+    .tooltiptext = Reload tab
+nullpath-tab-context-bookmark =
+    .label = Bookmark tab…
+    .tooltiptext = Bookmark tab…
+nullpath-tab-context-move =
+    .label = Move to
+nullpath-tab-context-move-new-window =
+    .label = New window
+# Variables:
+#   $title (String) - title of the selected tab in that window
+nullpath-tab-context-move-window =
+    .label = Window with “{ $title }”
+# Opens the page in another profile. The tab itself stays.
+nullpath-tab-context-reopen =
+    .label = Reopen in
+nullpath-tab-context-color =
+    .label = Set color
+# Variables:
+#   $color (String) - "none" or one of the color names below
+nullpath-tab-context-color-option =
+    .label = { $color ->
+        [red] Red
+        [orange] Orange
+        [yellow] Yellow
+        [green] Green
+        [cyan] Cyan
+        [blue] Blue
+        [purple] Purple
+        [pink] Pink
+        [gray] Gray
+       *[none] No color
+    }
+nullpath-tab-context-sort =
+    .label = Sort
+nullpath-tab-context-sort-title =
+    .label = By title
+nullpath-tab-context-sort-url =
+    .label = By address
+nullpath-tab-context-sort-recent =
+    .label = By last used
+nullpath-tab-context-pin =
+    .label = Pin
+nullpath-tab-context-unpin =
+    .label = Unpin
+nullpath-tab-context-duplicate =
+    .label = Duplicate
+nullpath-tab-context-unload =
+    .label = Unload
+nullpath-tab-context-copy-url =
+    .label = Copy URL
+nullpath-tab-context-copy-title =
+    .label = Copy title
+nullpath-tab-context-edit-title =
+    .label = Edit title
+nullpath-tab-context-group =
+    .label = Group
+nullpath-tab-context-flatten =
+    .label = Flatten
+nullpath-tab-context-configure =
+    .label = Configure site…
+nullpath-tab-context-close =
+    .label = Close
+# Default name of a new tab group; the name field opens right away.
+nullpath-tab-group-title = Group
+nullpath-tab-title-input =
+    .aria-label = Tab title
+
 ## about:nullpath-blocked (§7.4, §8.4)
 
 nullpath-blocked-page-title = Page not loaded

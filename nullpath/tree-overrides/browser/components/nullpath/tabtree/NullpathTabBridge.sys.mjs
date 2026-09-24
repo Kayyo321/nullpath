@@ -5,12 +5,15 @@
 /**
  * Local-only tab directory shared by Nullpath's three isolated profile
  * processes. Its schema contains only profile/window/tab ids, title, favicon
- * URI, selected/pinned state and count. Commands are one-shot files scoped to
- * a profile and acknowledged by the owning process after the operation.
+ * URI, tree parent, selected/pinned/muted/unloaded state, sidebar color and
+ * count. Commands are one-shot files scoped to a profile and acknowledged by
+ * the owning process after the operation. They name a tab and an action, never
+ * a URL: the owning process reads its own tab's URL when an action needs it.
  */
 import { setInterval, clearInterval, setTimeout } from "resource://gre/modules/Timer.sys.mjs";
 
 const MODES = ["i2p-sites", "i2p-publicweb", "direct"];
+export const TAB_COLORS = ["red", "orange", "yellow", "green", "cyan", "blue", "purple", "pink", "gray"];
 const VERSION = 1;
 // Other profiles' tabs and commands arrive by polling; a short interval keeps
 // cross-profile opens and closes feeling immediate. Our own snapshot is only
@@ -20,6 +23,10 @@ const REPUBLISH_MS = 3000;
 const SNAPSHOT_TTL = 10000;
 const WINDOW_ID = "nullpath-window-id";
 const TAB_ID = "nullpath-tab-id";
+const TAB_PARENT = "nullpath-tab-parent";
+const TAB_TITLE = "nullpath-tab-title";
+const TAB_COLOR = "nullpath-tab-color";
+const TAB_GROUP = "nullpath-tab-group";
 
 function mode() {
   return Services.prefs.getStringPref("nullpath.mode", "i2p-sites");
@@ -48,6 +55,26 @@ function isHomeTab(tab) {
   let spec = tab.linkedBrowser?.currentURI?.spec ?? "about:blank";
   return HOME_URLS.has(spec.replace(/[?#].*$/, ""));
 }
+function safeColor(value) { return TAB_COLORS.includes(value) ? value : ""; }
+
+// Every command and a check of its argument. Tab actions run in the owning
+// profile through NullpathTabTree.perform().
+const none = arg => arg == null;
+const optionalId = value => value === "" || safeId(value);
+const COMMANDS = new Map([
+  ["focus", none], ["close", none], ["new", none],
+  ["reload", none], ["mute", none], ["bookmark", none], ["undo-close", none],
+  ["pin", none], ["duplicate", none], ["unload", none], ["copy-url", none],
+  ["copy-title", none], ["flatten", none], ["configure", none],
+  ["set-title", arg => typeof arg == "string" && arg.length <= 300],
+  ["set-color", arg => arg === "" || TAB_COLORS.includes(arg)],
+  ["sort", arg => ["title", "url", "recent"].includes(arg)],
+  ["group", arg => safeId(arg?.id) && typeof arg.title == "string" && arg.title.length <= 300],
+  ["move-window", arg => arg === "new" || safeId(arg)],
+  ["reopen", arg => MODES.includes(arg)],
+  ["move", arg => optionalId(arg?.before) && optionalId(arg?.parent)],
+]);
+function validCommand(action, arg) { return COMMANDS.get(action)?.(arg ?? null) ?? false; }
 
 class TabBridge {
   #windows = new Set();
@@ -70,6 +97,8 @@ class TabBridge {
 
   addListener(callback) { this.#listeners.add(callback); this.#requestTick(); }
   removeListener(callback) { this.#listeners.delete(callback); }
+  /** Publishes now, for changes that fire no tab event (SessionStore values). */
+  refresh() { this.#requestTick(); }
 
   onWindowReady(win) {
     if (!win?.gBrowser || Services.appinfo.processType != Services.appinfo.PROCESS_TYPE_DEFAULT) return;
@@ -104,17 +133,22 @@ class TabBridge {
     for (let win of this.#windows) {
       if (win.closed || !win.gBrowser || lazy.PrivateBrowsingUtils.isWindowPrivate(win)) continue;
       // A closing tab stays in gBrowser.tabs until its close animation ends.
+      let value = (tab, key) => lazy.SessionStore.getCustomTabValue(tab, key);
       let tabs = win.gBrowser.tabs.filter(tab => !tab.closing).map(tab => ({
         id: this.#ensureTabId(tab),
-        title: String(tab.label || "New tab").slice(0, 300),
+        title: String(value(tab, TAB_TITLE) || tab.label || "New tab").slice(0, 300),
         favicon: safeFavicon(tab.image),
         home: isHomeTab(tab),
         selected: tab.selected,
         pinned: tab.pinned,
-        parent: lazy.SessionStore.getCustomTabValue(tab, "nullpath-tab-parent") || "",
+        muted: tab.muted,
+        unloaded: !tab.linkedPanel,
+        color: safeColor(value(tab, TAB_COLOR)),
+        group: !!value(tab, TAB_GROUP),
+        parent: value(tab, TAB_PARENT) || "",
         windowId: win.document.documentElement.getAttribute(WINDOW_ID),
       }));
-      windows.push({ id: win.document.documentElement.getAttribute(WINDOW_ID), tabs });
+      windows.push({ id: win.document.documentElement.getAttribute(WINDOW_ID), tabs, canReopen: lazy.SessionStore.getClosedTabCountForWindow(win) > 0 });
     }
     return { version: VERSION, mode: mode(), pid: Services.appinfo.processID, startTime: startTime(Services.appinfo.processID), updated: Date.now(), windows, count: windows.reduce((n, w) => n + w.tabs.length, 0) };
   }
@@ -144,7 +178,7 @@ class TabBridge {
         ? ChromeUtils.importESModule("moz-src:///browser/components/nullpath/router/NullpathProcess.sys.mjs").NullpathProcess.isAlive(data.pid, data.startTime)
         : true; // Fresh periodic snapshots provide the liveness check elsewhere.
       if (!alive) return { mode: profileMode, count: 0, windows: [] };
-      return { mode: profileMode, count: Number(data.count) || 0, windows: Array.isArray(data.windows) ? data.windows.map(w => ({ id: safeId(w.id) ? w.id : "", tabs: Array.isArray(w.tabs) ? w.tabs.filter(t => safeId(t.id)).map(t => ({ id: t.id, title: String(t.title || "New tab").slice(0, 300), favicon: safeFavicon(t.favicon), home: !!t.home, selected: !!t.selected, pinned: !!t.pinned, parent: safeId(t.parent) ? t.parent : "", windowId: safeId(t.windowId) ? t.windowId : "" })) : [] })) : [] };
+      return { mode: profileMode, count: Number(data.count) || 0, windows: Array.isArray(data.windows) ? data.windows.map(w => ({ id: safeId(w.id) ? w.id : "", canReopen: !!w.canReopen, tabs: Array.isArray(w.tabs) ? w.tabs.filter(t => safeId(t.id)).map(t => ({ id: t.id, title: String(t.title || "New tab").slice(0, 300), favicon: safeFavicon(t.favicon), home: !!t.home, selected: !!t.selected, pinned: !!t.pinned, muted: !!t.muted, unloaded: !!t.unloaded, color: safeColor(t.color), group: !!t.group, parent: safeId(t.parent) ? t.parent : "", windowId: safeId(t.windowId) ? t.windowId : "" })) : [] })) : [] };
     } catch (e) { return { mode: profileMode, count: 0, windows: [] }; }
   }
 
@@ -173,8 +207,8 @@ class TabBridge {
     return this.#ticking;
   }
 
-  async command(profileMode, action, windowId = "", tabId = "", sourceWindow = null) {
-    if (!MODES.includes(profileMode) || !["focus", "close", "new"].includes(action) || (windowId && !safeId(windowId)) || (tabId && !safeId(tabId))) return false;
+  async command(profileMode, action, windowId = "", tabId = "", sourceWindow = null, arg = null) {
+    if (!MODES.includes(profileMode) || !validCommand(action, arg) || (windowId && !safeId(windowId)) || (tabId && !safeId(tabId))) return false;
     if (profileMode == mode() && action == "new") {
       let win = sourceWindow?.gBrowser ? sourceWindow : Services.wm.getMostRecentWindow("navigator:browser");
       if (win?.gBrowser) { win.gBrowser.addTab("about:newtab", { triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal() }); win.focus(); return true; }
@@ -182,15 +216,11 @@ class TabBridge {
     // Our own tabs need no command file round trip.
     if (profileMode == mode() && action != "new") {
       let found = this.#findTab(windowId, tabId);
-      if (found) {
-        if (action == "focus") { found.win.gBrowser.selectedTab = found.tab; found.win.focus(); }
-        else found.win.gBrowser.removeTab(found.tab);
-        return true;
-      }
+      if (found) return this.#perform(found.win, found.tab, action, arg);
     }
     let id = `r-${Services.appinfo.processID}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     let path = PathUtils.join(dataDir(), `${profileMode}-command-${id}.json`);
-    await IOUtils.writeJSON(path, { version: VERSION, id, mode: profileMode, action, windowId, tabId, from: Services.appinfo.processID, created: Date.now(), status: "pending" }, { tmpPath: `${path}.tmp` });
+    await IOUtils.writeJSON(path, { version: VERSION, id, mode: profileMode, action, arg: arg ?? null, windowId, tabId, from: Services.appinfo.processID, created: Date.now(), status: "pending" }, { tmpPath: `${path}.tmp` });
     let snapshot = await this.#readSnapshot(profileMode);
     if (!snapshot.count && profileMode != mode()) {
       await IOUtils.remove(path).catch(() => {});
@@ -204,6 +234,14 @@ class TabBridge {
     }
     await IOUtils.remove(path).catch(() => {});
     return false;
+  }
+
+  async #perform(win, tab, action, arg) {
+    if (action == "focus") { win.gBrowser.selectedTab = tab; win.focus(); return true; }
+    if (action == "close") { win.gBrowser.removeTab(tab); return true; }
+    let ok = await lazy.NullpathTabTree.perform(win, tab, action, arg);
+    this.#requestTick();
+    return !!ok;
   }
 
   #findTab(windowId, tabId) {
@@ -231,7 +269,14 @@ class TabBridge {
   async #runCommand(path) {
     let request;
     try { request = await IOUtils.readJSON(path); } catch (e) { return; }
-    if (request.version != VERSION || request.mode != mode() || Date.now() - request.created > 30000 || !["focus", "close", "new"].includes(request.action)) return;
+    if (request.version != VERSION || request.mode != mode()) return;
+    // An answered request stays until its sender reads it. The sender gives up
+    // after a few seconds, so a late answer is left behind: never rerun one.
+    if (request.status != "pending" || Date.now() - request.created > 30000) {
+      if (Date.now() - request.created > 30000) await IOUtils.remove(path).catch(() => {});
+      return;
+    }
+    if (!validCommand(request.action, request.arg)) return;
     let ok = false;
     try {
       if (request.action == "new") {
@@ -243,7 +288,7 @@ class TabBridge {
           if (request.windowId && win.document.documentElement.getAttribute(WINDOW_ID) != request.windowId) continue;
           let tab = win.gBrowser.tabs.find(t => lazy.SessionStore.getCustomTabValue(t, TAB_ID) == request.tabId);
           if (!tab) continue;
-          if (request.action == "focus") { win.gBrowser.selectedTab = tab; win.focus(); ok = true; }
+          if (request.action != "close") ok = await this.#perform(win, tab, request.action, request.arg ?? null);
           else {
             let targetClosed = false;
             await new Promise(resolve => {
@@ -279,5 +324,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   SessionStore: "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+  NullpathTabTree: "moz-src:///browser/components/nullpath/tabtree/NullpathTabTree.sys.mjs",
 });
 export const NullpathTabBridge = new TabBridge();
